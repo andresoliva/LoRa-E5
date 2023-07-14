@@ -4,7 +4,8 @@
   2013 Copyright (c) Seeed Technology Inc.  All right reserved.
   2017 Copyright (c) Todd Krein. All rights reserved.
   2023 Copyright (c) Ramin Sangesari. All rights reserved.
-
+  2023 Copyright (c) Andres Oliva Trevisan. All rights reserved.
+  
   The MIT License (MIT)
 
   Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -48,6 +49,97 @@ void LoRaE5Class::init(uint8_t rx, uint8_t tx) {      //For Custom Serial
     #endif
 }
 
+int LoRaE5Class::at_send_check_response(char* p_cmd, char* p_ack, int timeout_ms,char* p_response){
+  #ifdef COMMAND_TIME_MEASURE
+    int rx_ACK_time=0;
+    int tx_msj_time=0;
+    cmd_time[0]=0;//init the string len
+  #endif 
+    int ch;
+    int num = 0;
+    int i;
+    int index = 0;
+    int ret_val=0;//init with 0 as default return value
+    int startMillis;
+    //clean the serial port before issuing the command
+    while (SerialLoRa.available() > 0){ ch = SerialLoRa.read();}//clean the read buffer
+    /*Send the comand*/
+    SerialLoRa.print(p_cmd); //sends command to Grove LoRa_E5 module
+    //---------
+    startMillis = millis();// Starts meassuring time after the command was sended
+    #ifdef COMMAND_TIME_MEASURE
+    tx_msj_time=millis();//original 0//ToDo: Check if 0 or millis(). check with longer packets because it does not seems to make a differnece
+    #endif
+    #ifdef COMMAND_PRINT_TO_USER
+    SerialUSB.print(p_cmd);  // Serial.print(p_p_cmd, args);
+    #endif
+    /*ensure a valid p_ack (pointer to command string expected response from the module) was provided*/
+    if (p_ack == NULL) { return ret_val;}
+    /*Parse the response to the command. Also meassure the time to get the response*/
+    while ((millis() - startMillis) < timeout_ms) {
+       if (SerialLoRa.available() > 0){ //check if they are characters to be read 
+           //we read one character at time because is the only way to get the ack tx time
+            ch = SerialLoRa.read();
+            recv_buf[index++] = ch;
+            //begin with times callculation
+            #ifdef COMMAND_TIME_MEASURE
+              //Tx message time
+              if (tx_msj_time==0){ //check if command to send message was issued. Then retrieves time
+                 if (strstr(recv_buf, "Start") != NULL){ tx_msj_time=millis();}
+              }
+              if(tx_msj_time>0){
+                //if (strstr(recv_buf, "Start") != NULL){
+                if (strstr(recv_buf, "Wait ACK") != NULL){
+                  tx_msj_time=millis() - tx_msj_time;
+                  sprintf(cmd_time+strlen(cmd_time),"\r\nTime to TX message: %i ms.",tx_msj_time);
+                  tx_msj_time=-1; //indicates the program to stop this parsing 
+                }
+              }
+              //Reception ACK wait time
+              if (rx_ACK_time==0){
+                if (strstr(recv_buf, "Wait ACK") != NULL){ rx_ACK_time=millis();}
+              }
+              if(rx_ACK_time>0){
+                if (strstr(recv_buf, "ACK Received") != NULL){
+                  rx_ACK_time=millis() - rx_ACK_time;
+                  sprintf(cmd_time+strlen(cmd_time),"\r\nTime to RX ACK from TX message: %i ms.",rx_ACK_time);
+                  rx_ACK_time=-1;//indicates the program to stop this parsing 
+                }
+              }
+            #endif     
+        //check if the command sended was acknowledged properly
+        if (strstr(recv_buf, p_ack) != NULL) {
+            ret_val= millis() - startMillis;//returns command execution time
+            break;//goes outside of code
+          }
+       }
+      else{//If there are no characters to be read, delays 1 ms and tryes to read again
+           delay(1);
+           }  
+      }/*End of While parsing loop*/    
+      #ifdef COMMAND_PRINT_TO_USER
+      recv_buf[index]=0;//indicates end of string
+      SerialUSB.println("\r\n");
+      SerialUSB.print(recv_buf);
+      SerialUSB.println("\r\n");
+      //delay(100);//gives enough time to print the commands, but it do not work :/
+      #endif
+      #ifdef COMMAND_TIME_MEASURE
+      /*add the time used to print*/
+      if (ret_val>0){sprintf(cmd_time+strlen(cmd_time),"\r\nTotal Command Time + Time to get ACK response: %i ms.",ret_val);}
+      /*print the accumulated message*/
+      if(strlen(cmd_time)>0){SerialUSB.print(cmd_time);}//print if something was written
+      if(ret_val==0){SerialUSB.print("\r\n!!Command Failed!! Did not get expected \"Ok\"or\"ACK\" response from E5 module after sent the command");}
+      #endif
+    //----------------------
+    /*if a buffer was provided, copy the response to the buffer */
+    if (not(p_response == NULL)) { strcpy(p_response, recv_buf);}  
+    //end of code: return cmd elapsed time in ms or 0 if did not work  
+    return ret_val;
+}
+
+
+
 void LoRaE5Class::getVersion(char *buffer, short length,
                               unsigned int timeout) {
     if (buffer) {
@@ -57,37 +149,29 @@ void LoRaE5Class::getVersion(char *buffer, short length,
     }
 }
 
-void LoRaE5Class::getId(char *buffer, short length, unsigned int timeout) {
-    if (buffer) {
-        while (SerialLoRa.available()) SerialLoRa.read();
-        sendCommand("AT+ID\r\n");//corrected from the original version to proper working
-        readBuffer(buffer, length, timeout);
-    }
+int LoRaE5Class::getId(char *buffer, unsigned int timeout) {
+    return(at_send_check_response("AT+ID\r\n","Done",timeout,buffer));
 }
 
-void LoRaE5Class::setId(char *DevAddr, char *DevEUI, char *AppEUI) {
-    char cmd[64];
+int LoRaE5Class::setId(char *DevAddr, char *DevEUI, char *AppEUI) {
+    int time_cmd=0;
 
     if (DevAddr) {
         memset(cmd, 0, 64);
         sprintf(cmd, "AT+ID=DevAddr,\"%s\"\r\n", DevAddr);
-        sendCommand(cmd);
-        delay(DEFAULT_TIMEWAIT);
+        time_cmd=+at_send_check_response(cmd,"+ID: DevAddr",DEFAULT_TIMEOUT,NULL);
     }
-
     if (DevEUI) {
         memset(cmd, 0, 64);
         sprintf(cmd, "AT+ID=DevEui,\"%s\"\r\n", DevEUI);
-        sendCommand(cmd);
-        delay(DEFAULT_TIMEWAIT);
+        time_cmd=+at_send_check_response(cmd,"+ID: DevEui",DEFAULT_TIMEOUT,NULL);
     }
-
     if (AppEUI) {
         memset(cmd, 0, 64);
         sprintf(cmd, "AT+ID=AppEui,\"%s\"\r\n", AppEUI);
-        sendCommand(cmd);
-        delay(DEFAULT_TIMEWAIT);
+        time_cmd=+at_send_check_response(cmd,"+ID: AppEui",DEFAULT_TIMEOUT,NULL);
     }
+    return(time_cmd);
 }
 /*Set each of the keys used for communication
 Session Key (NwkSKey) is used for interaction between the Node and the Network Server.
@@ -177,15 +261,12 @@ void LoRaE5Class::setPower(short power) {
     delay(DEFAULT_TIMEWAIT);
 }
 
-void LoRaE5Class::setPort(unsigned char port) {
+void LoRaE5Class::setPort(unsigned int port) {
     char cmd[32];
 
     memset(cmd, 0, 32);
-    sprintf(cmd, "AT+PORT=%d\r\n", port);
+    sprintf(cmd, "AT+PORT=%i\r\n", port);
     sendCommand(cmd);
-#if _DEBUG_SERIAL_
-    loraDebugPrint(DEFAULT_DEBUGTIME);
-#endif
     delay(DEFAULT_TIMEWAIT);
 }
 
@@ -312,62 +393,15 @@ bool LoRaE5Class::transferPacket(unsigned char *buffer, unsigned char length,
     return false;
 }
 
-bool LoRaE5Class::transferPacketWithConfirmed(char *buffer,
+int LoRaE5Class::transferPacketWithConfirmed(char *buffer,
                                                unsigned int timeout) {
     unsigned char length = strlen(buffer);
-    unsigned long timerStart, timerEnd;
-    char temp_char[40];
     int i;
-    
-    bool sentOK;
-
-    sentOK = false;
-
-    while (SerialLoRa.available()) SerialLoRa.read();
-    
-    sendCommand("AT+CMSG=\"");
-    for (int i = 0; i < length; i++) SerialLoRa.write(buffer[i]);
-    sendCommand("\"\r\n");
-    timerStart=millis(); //store current time
- #ifdef deadcode
-    memset(_buffer, 0, BEFFER_LENGTH_MAX);
-    i          = readBuffer(_buffer, BEFFER_LENGTH_MAX, timeout);
-    _buffer[i] = 0;
-    #if _DEBUG_SERIAL_
-    SerialUSB.print(_buffer);
-    #endif
-    if (strstr(_buffer, "+CMSG: ACK"))
-        return true;
-    else
-        return false;
-#endif
-       timerEnd=millis(); //store current time
-    while (true) {
-        memset(_buffer, 0, BEFFER_LENGTH_MAX);
-        i = readLine(_buffer, BEFFER_LENGTH_MAX, timeout);
-        if (i == 0) continue;
-        _buffer[i] = 0;
-
-        // !!! handle timeout
-#if _DEBUG_SERIAL_
-        SerialUSB.print(_buffer);
-#endif
-        if (strstr(_buffer, "+CMSG: Start")) continue;
-        if (strstr(_buffer, "+CMSG: Wait ACK")) continue;
-        if (strstr(_buffer, "+CMSG: TX")) continue;
-        if (strstr(_buffer, "+CMSG: RXWIN")) continue;
-        if (strstr(_buffer, "+CMSG: No free channel")) break;
-        if (strstr(_buffer, "+CMSG: Done")) break;
-        sprintf(temp_char,"ACK0 recieved in %i mseconds",timerEnd-timerStart);
-        SerialUSB.println(temp_char);
-        if (strstr(_buffer, "+CMSG: ACK Received")) {
-            sentOK = true;
-            continue;
-        }
-        SerialUSB.print("Result didn't match anything I expected.\n");
-    }
-
-    return sentOK;
+    int time_ret;
+    cmd[0]=0;//reset the string
+    sprintf(cmd,"AT+CMSG=\"%s\"\r\n",buffer);
+    time_ret=at_send_check_response(cmd,"Done",timeout,NULL);
+    return time_ret;
 }
 
 bool LoRaE5Class::transferPacketWithConfirmed(unsigned char *buffer,
@@ -375,38 +409,18 @@ bool LoRaE5Class::transferPacketWithConfirmed(unsigned char *buffer,
                                                unsigned int timeout) {
     char temp[3] = {0};
     int i;
-    unsigned char *ptr;
-    unsigned long timerStart, timerEnd;
-    char temp_char[40];
-    
-    while (SerialLoRa.available()) SerialLoRa.read();
-    
-    sendCommand("AT+CMSGHEX=\"");
+    int time_ret;
+    /*sendCommand("AT+CMSGHEX=\"");
     for (int i = 0; i < length; i++) {
         sprintf(temp, "%02x", buffer[i]);
         SerialLoRa.write(temp);
-    }
-    sendCommand("\"\r\n");
-    timerStart=millis();
-#if _DEBUG_SERIAL_
-    ptr = buffer;
-    for (i = 0; i < length; i++) SerialUSB.print(*(ptr++));
-
-    SerialUSB.println("");
-#endif
-
-    memset(_buffer, 0, BEFFER_LENGTH_MAX);
-    i          = readBuffer(_buffer, BEFFER_LENGTH_MAX, timeout);
-    _buffer[i] = 0;
-    timerEnd=millis();
-    SerialUSB.print(_buffer);
-    sprintf(temp_char,"Tx+ACK recieved in %i mseconds",timerEnd-timerStart);
-    SerialUSB.println(temp_char);//must be println or it does not works.
-    if (strstr(_buffer, "+CMSGHEX: ACK Received")){
-        return true;
-       }
-    else
-        return false;
+    }*/
+    cmd[0]=0;//reset the string size
+    sprintf(cmd+strlen(cmd),"AT+CMSGHEX=\"");//name of the command
+    for (int i = 0; i < length; i++) { sprintf(cmd+strlen(cmd), "%02x", buffer[i]);}//add the characters in hex format
+    sprintf(cmd+strlen(cmd),"\"\r\n");//end of command
+    time_ret=at_send_check_response(cmd,"Done",timeout,NULL);
+    return time_ret;
 }
 
 short LoRaE5Class::receivePacket(char *buffer, short length, short *rssi) {

@@ -36,6 +36,11 @@
 	#define SerialLoRa Serial1		//For SAMD Variant and XIAO NRF
 #endif
 
+/*Define to print to the USER into UART terminal the commands messages sended and response recieved */
+#define COMMAND_PRINT_TO_USER
+/*Define to meassure and print */
+#define COMMAND_TIME_MEASURE
+
 #define _DEBUG_SERIAL_ 0
 //#define DEFAULT_TIMEOUT 5000 // msecond
 #define DEFAULT_TIMEOUT   3000  // msecond
@@ -173,8 +178,21 @@ class LoRaE5Class {
      *
      *  \return Return null.
      */
+     
 	void init(uint8_t rx, uint8_t tx);
-
+    /**
+      * \Allows the user to send a command 
+      * 
+      * \param [in] *p_ack: pointer to Expected response from to indicate a proper execution of the command
+      * \param [in] *timeout_ms: timeout to expect
+      * \param [in] *p_cmd: pointer to command to send
+      *
+      * \return time in ms to send the command and recieve response
+      * Example: at_send_check_response("+ID: AppEui", 1000, "AT+ID\r\n");
+      * What is does?: Sends command "AT+ID\r\n\" to module
+      * Will end execution if recieves "+ID: AppEui" or 1000 has passed
+     */
+  int at_send_check_response(char*p_cmd, char *p_ack, int timeout_ms,char*p_response);
     /**
      *  \brief Read the version from device
      *
@@ -184,6 +202,7 @@ class LoRaE5Class {
      *
      *  \return Return null.
      */
+    
     void getVersion(char *buffer, short length,
                     unsigned int timeout = DEFAULT_TIMEOUT);
 
@@ -196,7 +215,7 @@ class LoRaE5Class {
      *
      *  \return Return null.
      */
-    void getId(char *buffer, short length,
+    int getId(char *buffer,
                unsigned int timeout = DEFAULT_TIMEOUT);
 
     /**
@@ -208,7 +227,7 @@ class LoRaE5Class {
      *
      *  \return Return null.
      */
-    void setId(char *DevAddr, char *DevEUI, char *AppEUI);
+    int setId(char *DevAddr, char *DevEUI, char *AppEUI);
 
     /**
      *  \brief Set the key
@@ -257,7 +276,7 @@ class LoRaE5Class {
      *
      *  \return Return null.
      */
-    void setPort(unsigned char port);
+    void setPort(unsigned int port);
 
     /**
      *  \brief Set the channel parameter
@@ -321,7 +340,7 @@ class LoRaE5Class {
      *
      *  \return Return bool. Ture : Confirmed ACK, false : Confirmed NOT ACK
      */
-    bool transferPacketWithConfirmed(char *buffer,
+    int transferPacketWithConfirmed(char *buffer,
                                      unsigned int timeout = DEFAULT_TIMEOUT);
     /**
      *  \brief Transfer the data
@@ -553,6 +572,11 @@ class LoRaE5Class {
     // short getBatteryVoltage(void);
 
    private:
+    char recv_buf[256];//reception buffer
+    char cmd[512];//store command to send
+    #ifdef COMMAND_TIME_MEASURE
+    char cmd_time[256];//store commands time
+    #endif
     void sendCommand(const char *command);
     void sendCommand(const __FlashStringHelper *command);
     short readBuffer(char *buffer, short length,
