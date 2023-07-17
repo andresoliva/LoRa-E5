@@ -26,7 +26,8 @@
 
 #ifndef _LORAE5_H_
 #define _LORAE5_H_
-
+/*COMMAND LIST AND EXAMPLES*/
+//https://files.seeedstudio.com/products/317990687/res/LoRa-E5%20AT%20Command%20Specification_V1.0%20.pdf
 #include <Arduino.h>
 
 #define SerialUSB  Serial
@@ -37,6 +38,7 @@
 	#define SerialLoRa Serial1		//For SAMD Variant and XIAO NRF
 #endif
 
+#define AT_NO_ACK "NO_ACK"  //For not checking the command response in order to send a command error
 /*Define to print to the USER into UART terminal the commands messages sended and response recieved */
 #define COMMAND_PRINT_TO_USER
 /*Define to meassure and print */
@@ -46,14 +48,14 @@
 //#define DEFAULT_TIMEOUT 5000 // msecond
 #define DEFAULT_TIMEOUT   3000  // msecond
 #define DEFAULT_TIMEWAIT \
-    200  // milliseconds to wait after issuing command via serial
+    100  // milliseconds to wait after issuing command via serial
 #define DEFAULT_DEBUGTIME \
     500  // milliseconds to wait for a response after command
 
 // #define BATTERY_POWER_PIN    A4
 // #define CHARGE_STATUS_PIN    A5
 
-#define BEFFER_LENGTH_MAX 256
+#define BEFFER_LENGTH_MAX 512   //reception buffer size. Commands response can be up to 400 bytes according to data sheet examples
 
 #define MAC_COMMAND_FLAG "MACCMD:"
 #define kLOCAL_BUFF_MAX  64
@@ -198,20 +200,18 @@ class LoRaE5Class {
      *  \brief Read the version from device
      *
      *  \param [in] *buffer The output data cache
-     *  \param [in] length The length of data cache
      *  \param [in] timeout The over time of read
      *
      *  \return Return null.
      */
     
-    void getVersion(char *buffer, short length,
+    int getVersion(char *buffer,
                     unsigned int timeout = DEFAULT_TIMEOUT);
 
     /**
      *  \brief Read the ID from device
      *
      *  \param [in] *buffer The output data cache
-     *  \param [in] length The length of data cache
      *  \param [in] timeout The over time of read
      *
      *  \return Return null.
@@ -239,7 +239,7 @@ class LoRaE5Class {
      *
      *  \return Return null.
      */
-    void setKey(char *NwkSKey, char *AppSKey, char *AppKey);
+    int setKey(char *NwkSKey, char *AppSKey, char *AppKey);
 
     /**
      *  \brief Set the data rate
@@ -249,7 +249,7 @@ class LoRaE5Class {
      *
      *  \return Return null.
      */
-    bool setDataRate(_data_rate_t dataRate         = DR0,
+    int setDataRate(_data_rate_t dataRate         = DR0,
                      _physical_type_t physicalType = EU434);
 
     /**
@@ -259,16 +259,16 @@ class LoRaE5Class {
      *
      *  \return Return null.
      */
-    void setAdaptiveDataRate(bool command);
+    int setAdaptiveDataRate(bool command);
 
     /**
      *  \brief Set the output power
      *
      *  \param [in] power The output power value
      *
-     *  \return Return null.
+     *  \return Return elapsed time to send command (+get response if corresponds) in mili seconds.
      */
-    void setPower(short power);
+    int setPower(short power);
 
     /**
      *  \brief Set the port number
@@ -277,7 +277,7 @@ class LoRaE5Class {
      *
      *  \return Return null.
      */
-    void setPort(unsigned int port);
+    int setPort(unsigned int port);
 
     /**
      *  \brief Set the channel parameter
@@ -287,8 +287,8 @@ class LoRaE5Class {
      *
      *  \return Return null.
      */
-    void getChannel(void);
-    void setChannel(unsigned char channel, float frequency);
+    int getChannel(void);
+    int setChannel(unsigned char channel, float frequency);
     /**
      *  \brief Set the channel parameter
      *
@@ -298,7 +298,7 @@ class LoRaE5Class {
      *
      *  \return Return null.
      */
-    void setChannel(unsigned char channel, float frequency,
+    int setChannel(unsigned char channel, float frequency,
                     _data_rate_t dataRata);
     /**
      *  \brief Set the channel parameter
@@ -310,7 +310,7 @@ class LoRaE5Class {
      *
      *  \return Return null.
      */
-    void setChannel(unsigned char channel, float frequency,
+    int setChannel(unsigned char channel, float frequency,
                     _data_rate_t dataRataMin, _data_rate_t dataRataMax);
 
     /**
@@ -321,7 +321,7 @@ class LoRaE5Class {
      *
      *  \return Return bool. Ture : transfer done, false : transfer failed
      */
-    bool transferPacket(char *buffer, unsigned int timeout = DEFAULT_TIMEOUT);
+    int transferPacket(char *buffer, unsigned int timeout = DEFAULT_TIMEOUT);
     /**
      *  \brief Transfer the data
      *
@@ -331,7 +331,7 @@ class LoRaE5Class {
      *
      *  \return Return bool. Ture : transfer done, false : transfer failed
      */
-    bool transferPacket(unsigned char *buffer, unsigned char length,
+    int transferPacket(unsigned char *buffer, unsigned char length,
                         unsigned int timeout = DEFAULT_TIMEOUT);
     /**
      *  \brief Transfer the packet data
@@ -352,7 +352,7 @@ class LoRaE5Class {
      *
      *  \return Return bool. Ture : Confirmed ACK, false : Confirmed NOT ACK
      */
-    bool transferPacketWithConfirmed(unsigned char *buffer,
+    int transferPacketWithConfirmed(unsigned char *buffer,
                                      unsigned char length,
                                      unsigned int timeout = DEFAULT_TIMEOUT);
 
@@ -375,7 +375,7 @@ class LoRaE5Class {
      *
      *  \return Return bool. Ture : transfer done, false : transfer failed
      */
-    bool transferProprietaryPacket(char *buffer,
+    int transferProprietaryPacket(char *buffer,
                                    unsigned int timeout = DEFAULT_TIMEOUT);
     /**
      *  \brief Transfer the proprietary data
@@ -386,7 +386,7 @@ class LoRaE5Class {
      *
      *  \return Return bool. Ture : transfer done, false : transfer failed
      */
-    bool transferProprietaryPacket(unsigned char *buffer, unsigned char length,
+    int transferProprietaryPacket(unsigned char *buffer, unsigned char length,
                                    unsigned int timeout = DEFAULT_TIMEOUT);
 
     /**
@@ -396,7 +396,7 @@ class LoRaE5Class {
      *
      *  \return Return null
      */
-    bool setDeviceMode(_device_mode_t mode);
+    int setDeviceMode(_device_mode_t mode);
 
     /**
      *  \brief Set device join a network
@@ -406,7 +406,7 @@ class LoRaE5Class {
      *
      *  \return Return bool. True : join OK, false : join NOT OK
      */
-    bool setOTAAJoin(_otaa_join_cmd_t command,
+    int setOTAAJoin(_otaa_join_cmd_t command,
                      unsigned int timeout = DEFAULT_TIMEOUT);
 
     /**
@@ -416,7 +416,7 @@ class LoRaE5Class {
      *
      *  \return Return null
      */
-    void setUnconfirmedMessageRepeatTime(unsigned char time);
+    int setUnconfirmedMessageRepeatTime(unsigned char time);
 
     /**
      *  \brief Set message retry times time
@@ -425,7 +425,7 @@ class LoRaE5Class {
      *
      *  \return Return null
      */
-    void setConfirmedMessageRetryTime(unsigned char time);
+    int setConfirmedMessageRetryTime(unsigned char time);
 
     /**
      *  \brief ON/OFF receice window 1
@@ -434,8 +434,8 @@ class LoRaE5Class {
      *
      *  \return Return null
      */
-    void getReceiveWindowFirst(void);
-    void setReceiveWindowFirst(bool command);
+    int getReceiveWindowFirst(void);
+    int setReceiveWindowFirst(bool command);
     /**
      *  \brief Set receice window 1 channel mapping
      *
@@ -444,7 +444,7 @@ class LoRaE5Class {
      *
      *  \return Return null
      */
-    void setReceiveWindowFirst(unsigned char channel, float frequency);
+    int setReceiveWindowFirst(unsigned char channel, float frequency);
 
     /**
      *  \brief Set receice window 2 channel mapping
@@ -454,7 +454,7 @@ class LoRaE5Class {
      *
      *  \return Return null
      */
-    void setReceiveWindowSecond(float frequency, _data_rate_t dataRate);
+    int setReceiveWindowSecond(float frequency, _data_rate_t dataRate);
     /**
      *  \brief Set receice window 2 channel mapping
      *
@@ -464,7 +464,7 @@ class LoRaE5Class {
      *
      *  \return Return null
      */
-    void setReceiveWindowSecond(float frequency,
+    int setReceiveWindowSecond(float frequency,
                                 _spreading_factor_t spreadingFactor,
                                 _band_width_t bandwidth);
 
@@ -476,7 +476,7 @@ class LoRaE5Class {
      *
      *  \return Return null
      */
-    void setReceiveWindowDelay(_window_delay_t command, unsigned short _delay);
+    int setReceiveWindowDelay(_window_delay_t command, unsigned short _delay);
 
     /**
      *  \brief Set LoRaWAN class type
@@ -485,28 +485,35 @@ class LoRaE5Class {
      *
      *  \return Return null
      */
-    void setClassType(_class_type_t type);
+    int setClassType(_class_type_t type);
 
     /**
      *  \brief Set device into low power mode
      *
      *  \return Return null
      */
-    void setDeviceLowPower(void);
+    int setDeviceLowPower(void);
+    
+    /**
+     *  \brief Wakes up the device
+     *
+     *  \return Return null
+     */
+    int setDeviceWakeUp(void);
 
     /**
      *  \brief Reset device
      *
      *  \return Return null
      */
-    void setDeviceReset(void);
+    int setDeviceReset(void);
 
     /**
      *  \brief Setup device default
      *
      *  \return Return null
      */
-    void setDeviceDefault(void);
+    int setDeviceDefault(void);
 
     /**
      *  \brief Initialize device into P2P mode
@@ -520,7 +527,7 @@ class LoRaE5Class {
      *
      *  \return Return null
      */
-    void initP2PMode(unsigned short frequency            = 433,
+    int initP2PMode(unsigned short frequency            = 433,
                      _spreading_factor_t spreadingFactor = SF12,
                      _band_width_t bandwidth             = BW125,
                      unsigned char txPreamble = 8, unsigned char rxPreamble = 8,
@@ -532,7 +539,7 @@ class LoRaE5Class {
      *
      *  \return Return bool. Ture : transfer done, false : transfer failed
      */
-    void transferPacketP2PMode(char *buffer);
+    int transferPacketP2PMode(char *buffer);
     /**
      *  \brief Transfer the data
      *
@@ -541,7 +548,7 @@ class LoRaE5Class {
      *
      *  \return Return bool. Ture : transfer done, false : transfer failed
      */
-    void transferPacketP2PMode(unsigned char *buffer, unsigned char length);
+    int transferPacketP2PMode(unsigned char *buffer, unsigned char length);
     /**
      *  \brief Receive the data
      *
@@ -561,10 +568,7 @@ class LoRaE5Class {
      *  \return Return null
      */
     void loraDebug(void);
-#if _DEBUG_SERIAL_
-    void loraDebugPrint(unsigned int timeout);
-#endif
-    void debugPrint(const char *str);
+
     /**
      *  \brief Read battery voltage
      *
@@ -573,25 +577,12 @@ class LoRaE5Class {
     // short getBatteryVoltage(void);
 
    private:
-    char recv_buf[256];//reception buffer
-    char cmd[512];//store command to send
+    char recv_buf[BEFFER_LENGTH_MAX];//reception buffer. Commands response can be up to 400 bytes according to data sheet examples
+    char cmd[556];//store command to send
+    char cmd_resp_ack[64];//store command response ACK to compare with string recieved and thus verify if the command worked. 
     #ifdef COMMAND_TIME_MEASURE
-    char cmd_time[256];//store commands time
+    char cmd_time[128];//store commands time response
     #endif
-    void sendCommand(const char *command);
-    void sendCommand(const __FlashStringHelper *command);
-    short readBuffer(char *buffer, short length,
-                     unsigned int timeout = DEFAULT_TIMEOUT);
-    short readLine(char *buffer, short length,
-                   unsigned int timeout = DEFAULT_TIMEOUT);
-    short waitForResponse(char *response,
-                          unsigned int timeout = DEFAULT_TIMEOUT);
-    short sendCommandAndWaitForResponse(
-        char *command, char *response, unsigned int timeout = DEFAULT_TIMEOUT);
-
-    char _buffer[256];
-    short debug;
-    _physical_type_t myType;
 };
 
 extern LoRaE5Class lora;

@@ -17,26 +17,26 @@
 #define LoRa_APPKEY              "2B7E151628AED2A609CF4F3CABF71588" //Custom key for this App
 #define LoRa_FREQ_standard       EU868   //International frequency band. see
 #define LoRa_DEVICE_CLASS        CLASS_A //CLASS_A for power restriction/low power nodes. Class C other device
-#define LoRa_PORT                8     //node Port for binary values
-#define LoRa_PORT_ALT            7     //node Port for string messages
-#define LoRa_POWER               14     //node Tx power
-#define LoRa_DR                  DR0   //DR5=5.2kbps //data rate. see at https://www.thethingsnetwork.org/docs/lorawan/regional-parameters/
+#define LoRa_PORT_BYTES                8       //node Port for binary values
+#define LoRa_PORT_STRING            7       //node Port for string messages
+#define LoRa_POWER               14      //node Tx power
+#define LoRa_DR                  DR0     //DR5=5.2kbps //data rate. see at https://www.thethingsnetwork.org/docs/lorawan/regional-parameters/
 #define LoRa_Tx_preamble_number  10
 #define LoRa_Rx_preamble_number  15
 
 
 #define LoRa_FREQ   868         //Standard_freq_band
 #define LoRa_RF_BW  BW125
-#define LoRa_RF_SF  SF7
+#define LoRa_RF_SF  SF12
 
 
 
 
 #include "LoRaE5.h"
-unsigned char buffer_binary[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9,10,11,12,13,14,15,16,17};
+unsigned char buffer_binary[128] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9,10,11,12,13,14,15,16,17,18,19,20};
 unsigned char buffer_p2p[128] = {0xef, 0xff, 0x55, 3, 4, 5, 6, 7, 8, 9,};
-char buffer_char[256] = "Hello, I am  a running test and who cares right?";
-char chat_temp[256];//256 is ok size for recieving command data
+char buffer_char[256] = "Hello, I am  a sending this string message using LoRa.";
+char char_temp[256];//256 is ok size for recieving command data
 
 void setup(void){
   SerialUSB.begin(115200);
@@ -48,32 +48,38 @@ void setup(void){
   lora.setId(NULL, LoRa_DEVEUI_CUSTOM, NULL);//WARNING: If you run this command, you will change FOREVER the defaultd value that the fabricator has asigned to the module.
 #endif
   //get device EUI for later printing
-  lora.getId(chat_temp,200); //200 ms is enough
+  lora.getId(char_temp,200); //200 ms is enough to get a response from the module
   //set up device
   lora.setDeviceMode(LWOTAA);//LWOTAA or LWABP
   lora.setDataRate((_data_rate_t)LoRa_DR, (_physical_type_t)LoRa_FREQ_standard);
   lora.setKey(NULL, NULL, LoRa_APPKEY); //Only App key is seeted when using OOTA
   lora.setClassType((_class_type_t) LoRa_DEVICE_CLASS); //set device class
-  lora.setPort(LoRa_PORT);
+  lora.setPort(LoRa_PORT_BYTES);
   lora.setPower(LoRa_POWER); //sets the Tx power
   //Tries to join the network
- while(! (lora.setOTAAJoin(JOIN, 5000))); //https://www.thethingsnetwork.org/docs/lorawan/message-types/
+  while( (lora.setOTAAJoin(JOIN, 5000))==0);//will attempt to join network until the ends of time //https://www.thethingsnetwork.org/docs/lorawan/message-types/
   //Now shows you the device actual DevEUI and AppEUI got at the begining
   //NOTE: the AppEUI is the original one set by the developer in this example, even if you modify it
-  SerialUSB.print(chat_temp);
-
+  SerialUSB.print(char_temp);//to print the obtained characters
 }
 
 void loop(void)
 {
   // setup();
   //lora.transferPacketP2PMode(buffer, 10);
-  SerialUSB.println("\r\nSend hex message:");
-  lora.setPort(LoRa_PORT);//set port for local reception
-  lora.transferPacketWithConfirmed(buffer_binary,10,2000);
-  delay(2000);//delay between messages, otherwise it will be mark as "modem Busy".100ms is ok but serial port will not be fast enought to print you the messages
-  SerialUSB.println("\r\nSend string message:");
-  lora.setPort(LoRa_PORT_ALT);//set port for local reception
+  /*Wake Up the LoRa module*/
+  lora.setDeviceWakeUp();//wake up the device if sleep
+  /*sending a string message*/
+  lora.setPort(LoRa_PORT_STRING);//set port for local reception
   lora.transferPacketWithConfirmed(buffer_char,2000);
-  delay(2000);
+  /*sending bytes message*/
+  lora.setPort(LoRa_PORT_BYTES);//set port for local reception
+  /*We send the same packet but 10 and 100 bytes. Using SF7/BW125Khz (default for EU868),
+  Command Time + Time to get ACK response should be around 128 ms
+  Check https://avbentem.github.io/airtime-calculator/ttn/eu868/10 for more info */
+  lora.transferPacketWithConfirmed(buffer_binary,10,2000);
+  lora.transferPacketWithConfirmed(buffer_binary,100,2000);
+  /*POWER DOWN the LoRa module*/
+  lora.setDeviceLowPower();
+  delay(10000);
 }
