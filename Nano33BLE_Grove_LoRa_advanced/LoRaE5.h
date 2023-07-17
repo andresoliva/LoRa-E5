@@ -4,7 +4,8 @@
   2013 Copyright (c) Seeed Technology Inc.  All right reserved.
   2017 Copyright (c) Todd Krein. All rights reserved.
   2023 Copyright (c) Ramin Sangesari. All rights reserved.
-
+  2023 Copyright (c) Andres Oliva Trevisan. All rights reserved.
+  
   The MIT License (MIT)
   Permission is hereby granted, free of charge, to any person obtaining a copy
   of this software and associated documentation files (the "Software"), to deal
