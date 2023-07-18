@@ -190,6 +190,15 @@ class LoRaE5Class {
      
 	void init(uint8_t rx, uint8_t tx);
     /**
+      * \Allows the user to read the serial buffer
+      * 
+      * \param [in] *buffer: pointer to buffer used to store characters
+      * \param [in] *length: amounts to store into desired buffer.Must no excede tyhesize of the buffer
+      * \param [in] *p_cmd: timeout_ms: timeout
+      *
+      * \return the amounts of bytes readed*/
+  unsigned int readBuffer(char* buffer, unsigned int length, unsigned int timeout_ms);
+    /**
       * \Allows the user to send a command 
       * 
       * \param [in] *p_ack: pointer to Expected response from to indicate a proper execution of the command

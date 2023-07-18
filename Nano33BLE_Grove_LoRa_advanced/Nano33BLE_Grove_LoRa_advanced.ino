@@ -38,7 +38,7 @@
 #if LoRa_FREQ_standard==EU868
  #if LoRa_DR==DR0
    #define LoRa_bps          250  //bytes per second
-   #define LoRa_head_tx_time 1,155.1​  //time in ms to transmit only the header of the packet
+   #define LoRa_head_tx_time 1155.1​  //time in ms to transmit only the header of the packet
  #endif
  #if LoRa_DR==DR5
    #define LoRa_bps          5470  //bytes per second
@@ -111,7 +111,8 @@ void loop(void)
   ((float)(PAYLOAD_SECOND_TX-PAYLOAD_FIRST_TX)*8)*1000/LoRa_bps);
   SerialUSB.print(char_temp);//to print the obtained characters
   char_temp[0]='\0';
-  sprintf(char_temp, "\r\nMeasured estimated diference between transmition time: %i ms.", time_tx2-time_tx1);
+  sprintf(char_temp, "\r\nMeasured diference between transmition  %i and %i bytes as payload: %i ms.",PAYLOAD_FIRST_TX,PAYLOAD_SECOND_TX,
+  time_tx2-time_tx1);
   SerialUSB.print(char_temp);//to print the obtained characters
   #endif 
   /*POWER DOWN the LoRa module*/

@@ -51,6 +51,29 @@ void LoRaE5Class::init(uint8_t rx, uint8_t tx) {      //For Custom Serial
     #endif
 }
 
+
+unsigned int LoRaE5Class::readBuffer(char* buffer, unsigned int length, unsigned int timeout_ms){
+char ch;
+unsigned int index;
+int startMillis;
+//clean reception buffer after starting with reception:
+strncpy(buffer," ",sizeof(recv_buf));//fill the content with white spaces
+strlcpy(buffer," ",1);//Manually indicates end of string
+#ifdef COMMAND_PRINT_TO_USER
+SerialUSB.print("\r\nReading serial buffer");  // Serial.print(p_p_cmd, args);
+#endif
+//starting to read
+startMillis = millis();// Starts meassuring time after the command was sended
+delay(timeout_ms);//Sleep for this period until attempting to read
+// ((millis() - startMillis) < timeout_ms) {//commented: not used at the moment
+       while (SerialLoRa.available() > 0){ //check if they are characters to be read 
+            ch = SerialLoRa.read();
+            buffer[index++] = ch; //add the character
+            if (index>=length){break;}//protect a buffer overflow
+            }
+  //     }//commented: not used at the moment
+return(index);//return the amount of bytes read    
+}
 unsigned int LoRaE5Class::at_send_check_response(char* p_cmd, char* p_ack, unsigned int timeout_ms,char* p_response){
     #ifdef COMMAND_TIME_MEASURE
     int tx_and_rx_ACK_time=0;//time to transmit and recieve message
@@ -106,19 +129,21 @@ unsigned int LoRaE5Class::at_send_check_response(char* p_cmd, char* p_ack, unsig
       else{//If there are no characters to be read, delays 1 ms and tryes to read again
            delay(1);
            }  
-      }/*End of While parsing loop*/    
+      }/*End of While parsing loop*/
+      if((strstr(AT_NO_ACK, p_ack) != NULL)){ret_val=millis() - startMillis;}//If this mode is selected, do not display     
       #ifdef COMMAND_PRINT_TO_USER
       SerialUSB.print("--------Command responses:\r\n");
       SerialUSB.print(recv_buf);
       SerialUSB.print("\r\n--------End of Commands responses");
       #endif
+      #ifdef COMMAND_PRINT_TO_USER
       #ifdef COMMAND_TIME_MEASURE
       /*add the time used to print*/
       if (ret_val>0){sprintf(cmd_time+strlen(cmd_time),"\r\nTotal Command Time + Time to get ACK response: %i ms.",ret_val);}
       /*print the accumulated message*/
       if(strlen(cmd_time)>0){SerialUSB.print(cmd_time);}//print if something was written
-      if((strstr(AT_NO_ACK, p_ack) != NULL)){ret_val=millis() - startMillis;}//If this mode is selected, do not display 
       if(ret_val==0){SerialUSB.print("\r\n!!Command Failed!! Did not get expected \"Ok\" or \"ACK\" response from E5 module after sending the command.");}
+      #endif
       #endif
     //----------------------
     /*if a buffer was provided, copy the response to the buffer */
@@ -349,7 +374,7 @@ unsigned int LoRaE5Class::transferPacketWithConfirmed(unsigned char *buffer,
     unsigned int time_ret;
     #ifdef COMMAND_PRINT_TO_USER
     cmd[0]='\0';//reset the string
-    sprintf(cmd,"\r\nSending %i bytes to a LoRa Gatewayand waits for ACK",(int)length);
+    sprintf(cmd,"\r\nSending %i bytes to a LoRa Gateway and waits for ACK",(int)length);
     SerialUSB.print(cmd);
     #endif
     cmd[0]='\0';//reset the string size
@@ -364,9 +389,8 @@ short LoRaE5Class::receivePacket(char *buffer, short length, short *rssi,unsigne
     char *ptr;
     short number = 0;
     unsigned int time_ret;
-    //call to recieve packet in a window
-    //time_ret=at_send_check_response(cmd,AT_NO_AC,timeout,NULL);
-    //Replace for read all
+    //call to recieve packet during a time window time window
+    readBuffer(recv_buf,sizeof(recv_buf),timeout);
     //parse the packet content
     ptr = strstr(recv_buf, "RSSI ");
     if (ptr)
@@ -735,10 +759,12 @@ short LoRaE5Class::receivePacketP2PMode(unsigned char *buffer, short length,
     char *ptr;
     short number;
     unsigned int time_ret=0;
-    cmd[0]='0';//reset the string
-    sprintf(cmd," ");//Send an empy command to recieve characters 
-    /*recieves all characters and store into "buffer" provided by input function */
-    time_ret=at_send_check_response(cmd,AT_NO_ACK,DEFAULT_TIMEWAIT,(char*)buffer);
+    char ch;
+    //clean reception buffer after starting with reception:
+    strncpy(recv_buf," ",sizeof(recv_buf));//fill the content with white spaces
+    strlcpy(recv_buf," ",1);//Manually indicates end of string
+    /*clean the serial port before issuing the command*/
+    while (SerialLoRa.available() > 0){ ch = SerialLoRa.read();}//clean the read buffer
     /*parse the content of the rx message to get information*/
     ptr = strstr(recv_buf, "LEN");
     if (ptr)
