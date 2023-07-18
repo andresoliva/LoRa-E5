@@ -6,6 +6,9 @@
 //Modified by: Andres Oliva Trevisan
 #include <Arduino.h>
 #include <stdarg.h> //for using 
+
+#define PRINT_TO_USER //To allow printing 
+
 //WARNING. DO NOT SET
 #define SET_CUSTOM_DEVUI// COMMENTED.// DO NOT UNCOMMENT UNLESS YOU HAVE THE ORIGINAL ID//
 //Information regarding the following parameters https://www.thethingsnetwork.org/docs/lorawan/architecture/
@@ -16,20 +19,35 @@
 #endif
 #define LoRa_APPKEY              "2B7E151628AED2A609CF4F3CABF71588" //Custom key for this App
 #define LoRa_FREQ_standard       EU868   //International frequency band. see
+#define LoRa_DR                  DR5     //DR5=5.2kbps //data rate. see at https://www.thethingsnetwork.org/docs/lorawan/regional-parameters/
+//SF7/BW125 at XX915/            DR3
+//SF7/BW125 at EU868 (most)      DR5
 #define LoRa_DEVICE_CLASS        CLASS_A //CLASS_A for power restriction/low power nodes. Class C other device
-#define LoRa_PORT_BYTES                8       //node Port for binary values
-#define LoRa_PORT_STRING            7       //node Port for string messages
+#define LoRa_PORT_BYTES          8       //node Port for binary values
+#define LoRa_PORT_STRING         7       //node Port for string messages
 #define LoRa_POWER               14      //node Tx power
-#define LoRa_DR                  DR0     //DR5=5.2kbps //data rate. see at https://www.thethingsnetwork.org/docs/lorawan/regional-parameters/
 #define LoRa_Tx_preamble_number  10
 #define LoRa_Rx_preamble_number  15
-
-
 #define LoRa_FREQ   868         //Standard_freq_band
 #define LoRa_RF_BW  BW125
 #define LoRa_RF_SF  SF12
 
 
+//DEMO PARAMETERS
+//you can get LoRa_head_tx_time in https://avbentem.github.io/airtime-calculator/ttn/eu868/0
+#if LoRa_FREQ_standard==EU868
+ #if LoRa_DR==DR0
+   #define LoRa_bps          250  //bytes per second
+   #define LoRa_head_tx_time 1,155.1​  //time in ms to transmit only the header of the packet
+ #endif
+ #if LoRa_DR==DR5
+   #define LoRa_bps          5470  //bytes per second
+   #define LoRa_head_tx_time 46.3  //time in ms to transmit only the header of the packet
+ #endif
+#endif
+#define PAYLOAD_FIRST_TX  10 //bytes
+#define PAYLOAD_SECOND_TX 100 //byest
+#define Tx_and_ACK_RX_timeout   2000         //Standard_freq_band
 
 
 #include "LoRaE5.h"
@@ -60,13 +78,16 @@ void setup(void){
   while( (lora.setOTAAJoin(JOIN, 5000))==0);//will attempt to join network until the ends of time //https://www.thethingsnetwork.org/docs/lorawan/message-types/
   //Now shows you the device actual DevEUI and AppEUI got at the begining
   //NOTE: the AppEUI is the original one set by the developer in this example, even if you modify it
+  #ifdef PRINT_TO_USER //defined in LoRaE5.h
   SerialUSB.print(char_temp);//to print the obtained characters
+  #endif
 }
 
 void loop(void)
 {
   // setup();
   //lora.transferPacketP2PMode(buffer, 10);
+  int time_tx1,time_tx2;
   /*Wake Up the LoRa module*/
   lora.setDeviceWakeUp();//wake up the device if sleep
   /*sending a string message*/
@@ -74,11 +95,25 @@ void loop(void)
   lora.transferPacketWithConfirmed(buffer_char,2000);
   /*sending bytes message*/
   lora.setPort(LoRa_PORT_BYTES);//set port for local reception
-  /*We send the same packet but 10 and 100 bytes. Using SF7/BW125Khz (default for EU868),
-  Command Time + Time to get ACK response should be around 128 ms
+  /*We send the same packet but with 10 and 100 bytes of payload. Using SF7/BW125Khz (default for EU868),
+  Command Time + Time to get ACK response should be around 128.7 ms
   Check https://avbentem.github.io/airtime-calculator/ttn/eu868/10 for more info */
-  lora.transferPacketWithConfirmed(buffer_binary,10,2000);
-  lora.transferPacketWithConfirmed(buffer_binary,100,2000);
+  
+  time_tx1=lora.transferPacketWithConfirmed(buffer_binary,PAYLOAD_FIRST_TX,Tx_and_ACK_RX_timeout);
+  time_tx2=lora.transferPacketWithConfirmed(buffer_binary,PAYLOAD_SECOND_TX,Tx_and_ACK_RX_timeout);
+  #ifdef PRINT_TO_USER //defined in LoRaE5.h
+  char_temp[0]='\0';
+  sprintf(char_temp, "\r\nCalculated transmition time of messages with %i and %i bytes as payload: %.1f ms,%.1f ms.",PAYLOAD_FIRST_TX,PAYLOAD_SECOND_TX,
+  LoRa_head_tx_time+(float)(PAYLOAD_FIRST_TX)*8*1000/LoRa_bps,  LoRa_head_tx_time+(float)(PAYLOAD_SECOND_TX)*8*1000/LoRa_bps);
+  SerialUSB.print(char_temp);//to print the obtained characters
+  char_temp[0]='\0';
+  sprintf(char_temp, "\r\nCalculated diference between transmiting %i and %i bytes as payload: %.1f ms.",PAYLOAD_FIRST_TX,PAYLOAD_SECOND_TX,
+  ((float)(PAYLOAD_SECOND_TX-PAYLOAD_FIRST_TX)*8)*1000/LoRa_bps);
+  SerialUSB.print(char_temp);//to print the obtained characters
+  char_temp[0]='\0';
+  sprintf(char_temp, "\r\nMeasured estimated diference between transmition time: %i ms.", time_tx2-time_tx1);
+  SerialUSB.print(char_temp);//to print the obtained characters
+  #endif 
   /*POWER DOWN the LoRa module*/
   lora.setDeviceLowPower();
   delay(10000);

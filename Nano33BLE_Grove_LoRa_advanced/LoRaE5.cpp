@@ -36,7 +36,7 @@ const char *physTypeStr[10] = {"EU434",        "EU868", "US915", "US915HYBRID",
                                "CN470PREQUEL", "STE920"};
 
 LoRaE5Class::LoRaE5Class(void) {
-    debug = false;
+
 }
 
 void LoRaE5Class::init(void) {         //For Hardware Serial
@@ -51,7 +51,7 @@ void LoRaE5Class::init(uint8_t rx, uint8_t tx) {      //For Custom Serial
     #endif
 }
 
-int LoRaE5Class::at_send_check_response(char* p_cmd, char* p_ack, int timeout_ms,char* p_response){
+unsigned int LoRaE5Class::at_send_check_response(char* p_cmd, char* p_ack, unsigned int timeout_ms,char* p_response){
     #ifdef COMMAND_TIME_MEASURE
     int tx_and_rx_ACK_time=0;//time to transmit and recieve message
     cmd_time[0]=0;//init the string len
@@ -112,16 +112,13 @@ int LoRaE5Class::at_send_check_response(char* p_cmd, char* p_ack, int timeout_ms
       SerialUSB.print(recv_buf);
       SerialUSB.print("\r\n--------End of Commands responses");
       #endif
-      //clean reception buffer after printing:
-      strncpy(recv_buf," ",sizeof(recv_buf));//fill the content with white spaces
-      strlcpy(recv_buf," ",1);//Manually indicates end of string
       #ifdef COMMAND_TIME_MEASURE
       /*add the time used to print*/
       if (ret_val>0){sprintf(cmd_time+strlen(cmd_time),"\r\nTotal Command Time + Time to get ACK response: %i ms.",ret_val);}
       /*print the accumulated message*/
       if(strlen(cmd_time)>0){SerialUSB.print(cmd_time);}//print if something was written
       if((strstr(AT_NO_ACK, p_ack) != NULL)){ret_val=millis() - startMillis;}//If this mode is selected, do not display 
-      if(ret_val==0){SerialUSB.print("\r\n!!Command Failed!! Did not get expected \"Ok\"or\"ACK\" response from E5 module after sent the command");}
+      if(ret_val==0){SerialUSB.print("\r\n!!Command Failed!! Did not get expected \"Ok\" or \"ACK\" response from E5 module after sending the command.");}
       #endif
     //----------------------
     /*if a buffer was provided, copy the response to the buffer */
@@ -132,16 +129,16 @@ int LoRaE5Class::at_send_check_response(char* p_cmd, char* p_ack, int timeout_ms
 
 
 
-int LoRaE5Class::getVersion(char *buffer, unsigned int timeout) {
+unsigned int LoRaE5Class::getVersion(char *buffer, unsigned int timeout) {
     return(at_send_check_response("AT+VER=?\r\n",AT_NO_ACK,timeout,buffer));
 }
 
-int LoRaE5Class::getId(char *buffer, unsigned int timeout) {
+unsigned int LoRaE5Class::getId(char *buffer, unsigned int timeout) {
     return(at_send_check_response("AT+ID\r\n","Done",timeout,buffer));
 }
 
-int LoRaE5Class::setId(char *DevAddr, char *DevEUI, char *AppEUI) {
-    int time_cmd=0;
+unsigned int LoRaE5Class::setId(char *DevAddr, char *DevEUI, char *AppEUI) {
+    unsigned int time_cmd=0;
 
     if (DevAddr) {
         memset(cmd, 0, 64);
@@ -166,8 +163,8 @@ Application Session Key (AppSKey) is used for encryption and decryption of the p
 The application key (AppKey) is only known by the device and by the application. Dynamically activated devices (OTAA) 
 use the Application Key (AppKey) to derive the two session keys during the activation procedure
 */
-int LoRaE5Class::setKey(char *NwkSKey, char *AppSKey, char *AppKey) {
-    int time_cmd=0;
+unsigned int LoRaE5Class::setKey(char *NwkSKey, char *AppSKey, char *AppKey) {
+    unsigned int time_cmd=0;
     if (NwkSKey) {
         cmd[0]='\0';//reset the string position
         sprintf(cmd, "AT+KEY=NWKSKEY,\"%s\"\r\n", NwkSKey);
@@ -188,21 +185,21 @@ int LoRaE5Class::setKey(char *NwkSKey, char *AppSKey, char *AppKey) {
     return(time_cmd);
 }
 
-int LoRaE5Class::setDataRate(_data_rate_t dataRate,
+unsigned int LoRaE5Class::setDataRate(_data_rate_t dataRate,
                                _physical_type_t physicalType) {
-    int time_cmd=0;
+    unsigned int time_cmd=0;
 
     if ((physicalType <= UNINIT) && (physicalType >= UNDEF)) {
         SerialUSB.print("\r\n!!Unknown datarate\n");
         return 0;
     }
-    // set frequency band
+    // set frequency band first
     cmd[0]='\0';//reset the string position
     cmd_resp_ack[0]='\0';//reset the string position
     sprintf(cmd, "AT+DR= %s\r\n", physTypeStr[physicalType]);
     sprintf(cmd_resp_ack, "+DR: %s\r\n", physTypeStr[physicalType]);
     time_cmd=+at_send_check_response(cmd,cmd_resp_ack,DEFAULT_TIMEOUT,NULL);
-    // set data rate
+    // then set data rate
     cmd[0]='\0';//reset the string position
     cmd_resp_ack[0]='\0';//reset the string position
     sprintf(cmd, "AT+DR=%d\r\n", dataRate);
@@ -211,8 +208,8 @@ int LoRaE5Class::setDataRate(_data_rate_t dataRate,
     return time_cmd;
 }
 
-int LoRaE5Class::setPower(short power) {
-    int time_cmd=0;
+unsigned int LoRaE5Class::setPower(short power) {
+    unsigned int time_cmd=0;
     cmd_resp_ack[0]='\0';
     cmd[0]='\0';//reset the string position
     sprintf(cmd, "AT+POWER=%d\r\n", power);
@@ -220,8 +217,8 @@ int LoRaE5Class::setPower(short power) {
     time_cmd=at_send_check_response(cmd,cmd_resp_ack,DEFAULT_TIMEWAIT,NULL);// returns 0 if the command was not ACK by Gateway.
 }
 
-int LoRaE5Class::setPort(unsigned int port) {
-    int time_cmd=0;
+unsigned int LoRaE5Class::setPort(unsigned char port) {
+    unsigned int time_cmd=0;
     cmd_resp_ack[0]='\0';
     cmd[0]='\0';//reset the string position
     sprintf(cmd, "AT+PORT=%d\r\n", port);
@@ -229,8 +226,8 @@ int LoRaE5Class::setPort(unsigned int port) {
     time_cmd=at_send_check_response(cmd,cmd_resp_ack,DEFAULT_TIMEWAIT,NULL);// returns 0 if the command was not ACK by Gateway.
 }
 
-int LoRaE5Class::setAdaptiveDataRate(bool command) {
-    int time_cmd=0;
+unsigned int LoRaE5Class::setAdaptiveDataRate(bool command) {
+    unsigned int time_cmd=0;
     cmd_resp_ack[0]='\0';
     cmd[0]='\0';//reset the string position
     if (command){
@@ -245,8 +242,8 @@ int LoRaE5Class::setAdaptiveDataRate(bool command) {
     delay(DEFAULT_TIMEWAIT);
 }
 
-int LoRaE5Class::getChannel(void) {
-    int time_cmd=0;
+unsigned int LoRaE5Class::getChannel(void) {
+    unsigned int time_cmd=0;
         cmd_resp_ack[0]='\0';
     cmd[0]='\0';//reset the string position
     sprintf(cmd,"AT+CH\r\n");
@@ -255,8 +252,8 @@ int LoRaE5Class::getChannel(void) {
     time_cmd=at_send_check_response(cmd,cmd_resp_ack,DEFAULT_TIMEWAIT,NULL);// returns 0 if the command was not ACK by Gateway.
 }
 
-int LoRaE5Class::setChannel(unsigned char channel, float frequency) {
-    int time_cmd=0;
+unsigned int LoRaE5Class::setChannel(unsigned char channel, float frequency) {
+    unsigned int time_cmd=0;
     cmd_resp_ack[0]='\0';
     cmd[0]='\0';//reset the string position
     if (frequency == 0){
@@ -271,9 +268,9 @@ int LoRaE5Class::setChannel(unsigned char channel, float frequency) {
     time_cmd=at_send_check_response(cmd,cmd_resp_ack,DEFAULT_TIMEWAIT,NULL);// returns 0 if the command was not ACK by Gateway.
 }
 
-int LoRaE5Class::setChannel(unsigned char channel, float frequency,
+unsigned int LoRaE5Class::setChannel(unsigned char channel, float frequency,
                               _data_rate_t dataRata) {
-    int time_cmd=0;
+    unsigned int time_cmd=0;
     if (channel > 16) channel = 16;
 
     memset(cmd, 0, 32);
@@ -282,10 +279,10 @@ int LoRaE5Class::setChannel(unsigned char channel, float frequency,
     time_cmd=at_send_check_response(cmd,AT_NO_ACK,DEFAULT_TIMEWAIT,NULL);// returns 0 if the command was not ACK by Gateway.
 }
 
-int LoRaE5Class::setChannel(unsigned char channel, float frequency,
+unsigned int LoRaE5Class::setChannel(unsigned char channel, float frequency,
                               _data_rate_t dataRataMin,
                               _data_rate_t dataRataMax) {
-    int time_cmd=0;
+    unsigned int time_cmd=0;
 
     if (channel > 16) channel = 16;
 
@@ -297,10 +294,10 @@ int LoRaE5Class::setChannel(unsigned char channel, float frequency,
     return time_cmd;
 }
 
-int LoRaE5Class::transferPacket(char *buffer, unsigned int timeout) {
+unsigned int LoRaE5Class::transferPacket(char *buffer, unsigned int timeout) {
     unsigned char length = strlen(buffer);
     int i;
-    int time_ret;
+    unsigned int time_ret;
     #ifdef COMMAND_PRINT_TO_USER
     cmd[0]='\0';//reset the string
     sprintf(cmd,"\r\nSending %i characters to a LoRa Gateway",(int)length);
@@ -312,10 +309,10 @@ int LoRaE5Class::transferPacket(char *buffer, unsigned int timeout) {
     return time_ret;
 }
 
-int LoRaE5Class::transferPacket(unsigned char *buffer, unsigned char length,
+unsigned int LoRaE5Class::transferPacket(unsigned char *buffer, unsigned char length,
                                   unsigned int timeout) {
     int i;
-    int time_ret;
+    unsigned int time_ret;
     #ifdef COMMAND_PRINT_TO_USER
     cmd[0]='\0';//reset the string
     sprintf(cmd,"\r\nSending %i bytes to a LoRa Gateway",(int)length);
@@ -329,11 +326,11 @@ int LoRaE5Class::transferPacket(unsigned char *buffer, unsigned char length,
     return time_ret;
 }
 
-int LoRaE5Class::transferPacketWithConfirmed(char *buffer,
+unsigned int LoRaE5Class::transferPacketWithConfirmed(char *buffer,
                                                unsigned int timeout) {
     unsigned char length = strlen(buffer);
     int i;
-    int time_ret;
+    unsigned int time_ret;
     #ifdef COMMAND_PRINT_TO_USER
     cmd[0]='\0';//reset the string
     sprintf(cmd,"\r\nSending %i characters to a LoRa Gateway and waits for ACK",(int)length);
@@ -345,11 +342,11 @@ int LoRaE5Class::transferPacketWithConfirmed(char *buffer,
     return time_ret;
 }
 
-int LoRaE5Class::transferPacketWithConfirmed(unsigned char *buffer,
+unsigned int LoRaE5Class::transferPacketWithConfirmed(unsigned char *buffer,
                                                unsigned char length,
                                                unsigned int timeout) {
     int i;
-    int time_ret;
+    unsigned int time_ret;
     #ifdef COMMAND_PRINT_TO_USER
     cmd[0]='\0';//reset the string
     sprintf(cmd,"\r\nSending %i bytes to a LoRa Gatewayand waits for ACK",(int)length);
@@ -363,10 +360,14 @@ int LoRaE5Class::transferPacketWithConfirmed(unsigned char *buffer,
     return time_ret;
 }
 
-short LoRaE5Class::receivePacket(char *buffer, short length, short *rssi) {
+short LoRaE5Class::receivePacket(char *buffer, short length, short *rssi,unsigned int timeout) {
     char *ptr;
     short number = 0;
-
+    unsigned int time_ret;
+    //call to recieve packet in a window
+    //time_ret=at_send_check_response(cmd,AT_NO_AC,timeout,NULL);
+    //Replace for read all
+    //parse the packet content
     ptr = strstr(recv_buf, "RSSI ");
     if (ptr)
         *rssi = atoi(ptr + 5);
@@ -443,16 +444,14 @@ short LoRaE5Class::receivePacket(char *buffer, short length, short *rssi) {
         }
     }
 
-    memset(recv_buf, 0, BEFFER_LENGTH_MAX);
-
     return number;
 }
 
-int LoRaE5Class::transferProprietaryPacket(char *buffer,
+unsigned int LoRaE5Class::transferProprietaryPacket(char *buffer,
                                              unsigned int timeout) {
     unsigned char length = strlen(buffer);
     int i;
-    int time_ret;
+    unsigned int time_ret;
     #ifdef COMMAND_PRINT_TO_USER
     cmd[0]='\0';//reset the string
     sprintf(cmd,"\r\nSending %i characters in LoRaWAN proprietary frames format to a LoRa Gateway",(int)length);
@@ -464,11 +463,11 @@ int LoRaE5Class::transferProprietaryPacket(char *buffer,
     return time_ret; 
 }
 
-int LoRaE5Class::transferProprietaryPacket(unsigned char *buffer,
+unsigned int LoRaE5Class::transferProprietaryPacket(unsigned char *buffer,
                                              unsigned char length,
                                              unsigned int timeout) {
     int i;
-    int time_ret;
+    unsigned int time_ret;
     #ifdef COMMAND_PRINT_TO_USER
     cmd[0]='\0';//reset the string
     sprintf(cmd,"\r\nSending %i bytes in LoRaWAN proprietary frames format to a LoRa Gateway",(int)length);
@@ -482,8 +481,8 @@ int LoRaE5Class::transferProprietaryPacket(unsigned char *buffer,
     return time_ret;
 }
 
-int LoRaE5Class::setUnconfirmedMessageRepeatTime(unsigned char time) {
-    int time_ret=0;
+unsigned int LoRaE5Class::setUnconfirmedMessageRepeatTime(unsigned char time) {
+    unsigned int time_ret=0;
     //ensure a proper value
     if (time > 15)
         time = 15;
@@ -498,8 +497,8 @@ int LoRaE5Class::setUnconfirmedMessageRepeatTime(unsigned char time) {
     return time_ret;
 }
 
-int LoRaE5Class::setConfirmedMessageRetryTime(unsigned char time) {
-    int time_ret=0;
+unsigned int LoRaE5Class::setConfirmedMessageRetryTime(unsigned char time) {
+    unsigned int time_ret=0;
     if (time > 15)
         time = 15;
     else if (time == 0)
@@ -513,16 +512,16 @@ int LoRaE5Class::setConfirmedMessageRetryTime(unsigned char time) {
     return time_ret;
 }
 
-int LoRaE5Class::getReceiveWindowFirst(void) {
-    int time_ret=0;
+unsigned int LoRaE5Class::getReceiveWindowFirst(void) {
+    unsigned int time_ret=0;
     cmd[0]='\0';
     sprintf(cmd, "AT+RXWIN1TRY=%d\r\n", time);
     time_ret=at_send_check_response(cmd,AT_NO_ACK,DEFAULT_TIMEWAIT,NULL);
     return time_ret;
 }
 
-int LoRaE5Class::setReceiveWindowFirst(bool command) {
-    int time_ret=0;
+unsigned int LoRaE5Class::setReceiveWindowFirst(bool command) {
+    unsigned int time_ret=0;
     cmd[0]='\0';
     if (command)
         sprintf(cmd, "AT+RXWIN1=ON");
@@ -531,9 +530,9 @@ int LoRaE5Class::setReceiveWindowFirst(bool command) {
     time_ret=at_send_check_response(cmd,AT_NO_ACK,DEFAULT_TIMEWAIT,NULL);
     return time_ret;
 }
-int LoRaE5Class::setReceiveWindowFirst(unsigned char channel,
+unsigned int LoRaE5Class::setReceiveWindowFirst(unsigned char channel,
                                          float frequency) {
-     int time_ret=0;
+     unsigned int time_ret=0;
     //    if(channel > 16) channel = 16;
     cmd[0]='\0';
     if (frequency == 0)
@@ -545,9 +544,9 @@ int LoRaE5Class::setReceiveWindowFirst(unsigned char channel,
     return time_ret;
 }
 
-int LoRaE5Class::setReceiveWindowSecond(float frequency,
+unsigned int LoRaE5Class::setReceiveWindowSecond(float frequency,
                                           _data_rate_t dataRate) {
-     int time_ret=0;
+     unsigned int time_ret=0;
     cmd[0]='\0';
     sprintf(cmd, "AT+RXWIN2=%d.%d,%d\r\n", (short)frequency,
             short(frequency * 10) % 10, dataRate);
@@ -555,10 +554,10 @@ int LoRaE5Class::setReceiveWindowSecond(float frequency,
     return time_ret;
 }
 
-int LoRaE5Class::setReceiveWindowSecond(float frequency,
+unsigned int LoRaE5Class::setReceiveWindowSecond(float frequency,
                                           _spreading_factor_t spreadingFactor,
                                           _band_width_t bandwidth) {
-    int time_ret=0;
+    unsigned int time_ret=0;
     cmd[0]='\0';
     sprintf(cmd, "AT+RXWIN2=%d.%d,%d,%d\r\n", (short)frequency,
             short(frequency * 10) % 10, spreadingFactor, bandwidth);
@@ -566,9 +565,9 @@ int LoRaE5Class::setReceiveWindowSecond(float frequency,
     return time_ret;
 }
 
-int LoRaE5Class::setReceiveWindowDelay(_window_delay_t command,
+unsigned int LoRaE5Class::setReceiveWindowDelay(_window_delay_t command,
                                          unsigned short _delay) {
-    int time_ret=0;
+    unsigned int time_ret=0;
     cmd[0]='\0';
     if (command == RECEIVE_DELAY1)
         sprintf(cmd, "AT+DELAY=RX1,%d\r\n", _delay);
@@ -583,8 +582,8 @@ int LoRaE5Class::setReceiveWindowDelay(_window_delay_t command,
     return time_ret;
 }
 
-int LoRaE5Class::setClassType(_class_type_t type) {
-    int time_cmd=0;
+unsigned int LoRaE5Class::setClassType(_class_type_t type) {
+    unsigned int time_cmd=0;
     cmd[0]='\0';//reset the string position
     cmd_resp_ack[0]='\0';//reset the string position
     char class_X;
@@ -607,9 +606,9 @@ int LoRaE5Class::setClassType(_class_type_t type) {
 //
 // set the JOIN mode to either LWOTAA or LWABP
 //
-int LoRaE5Class::setDeviceMode(_device_mode_t mode) {
+unsigned int LoRaE5Class::setDeviceMode(_device_mode_t mode) {
     int timeout = 1000;
-    int time_cmd=0;//Returned time to succesfully execute a command. 
+    unsigned int time_cmd=0;//Returned time to succesfully execute a command. 
     cmd[0]='\0';//reset the string
     if (mode == LWABP){
         sprintf(cmd,"AT+MODE=LWABP\r\n");
@@ -627,9 +626,9 @@ int LoRaE5Class::setDeviceMode(_device_mode_t mode) {
 //  JOIN with the application
 //
 //  setDeviceMode should have been called before this.
-int LoRaE5Class::setOTAAJoin(_otaa_join_cmd_t command,
+unsigned int LoRaE5Class::setOTAAJoin(_otaa_join_cmd_t command,
                                unsigned int timeout) {
-    int time_cmd=0;//Returned time to succesfully execute a command. 
+    unsigned int time_cmd=0;//Returned time to succesfully execute a command. 
     if (command == JOIN){
         sprintf(cmd,"AT+JOIN\r\n");
         time_cmd=at_send_check_response(cmd,"+JOIN: Network joined",timeout,NULL);
@@ -642,15 +641,15 @@ int LoRaE5Class::setOTAAJoin(_otaa_join_cmd_t command,
     return time_cmd;//Returned time to succesfully execute a command. 0 if the command was not ACK by Gateway.
 }
 
-int LoRaE5Class::setDeviceLowPower(void) {
-    int time_cmd=0;//Returned time to succesfully execute a command. 
+unsigned int LoRaE5Class::setDeviceLowPower(void) {
+    unsigned int time_cmd=0;//Returned time to succesfully execute a command. 
     cmd[0]='\0';//reset the string position
     sprintf(cmd,"AT+LOWPOWER\r\n");
     time_cmd=at_send_check_response(cmd,"+LOWPOWER: SLEEP",DEFAULT_TIMEWAIT,NULL);
     return(time_cmd);
 }
-int LoRaE5Class::setDeviceWakeUp(void) {
-    int time_cmd=0;//Returned time to succesfully execute a command. 
+unsigned int LoRaE5Class::setDeviceWakeUp(void) {
+    unsigned int time_cmd=0;//Returned time to succesfully execute a command. 
     cmd[0]='\0';//reset the string position
     sprintf(cmd,"AT\r\n");
     time_cmd=at_send_check_response(cmd,"+LOWPOWER: WAKEUP",DEFAULT_TIMEWAIT,NULL);
@@ -659,8 +658,8 @@ int LoRaE5Class::setDeviceWakeUp(void) {
 //
 // Reset the LoRa module. Does not factory reset
 //
-int LoRaE5Class::setDeviceReset(void) {
-    int time_cmd;
+unsigned int LoRaE5Class::setDeviceReset(void) {
+    unsigned int time_cmd;
     cmd[0]='\0';//reset the string position
     sprintf(cmd,"AT+RESET\r\n");
     time_cmd=at_send_check_response(cmd,"+RESET: OK",DEFAULT_TIMEWAIT,NULL);
@@ -670,20 +669,20 @@ int LoRaE5Class::setDeviceReset(void) {
 //
 //  Factory reset the module.
 //
-int LoRaE5Class::setDeviceDefault(void) {
+unsigned int LoRaE5Class::setDeviceDefault(void) {
     cmd[0]='\0';//reset the string position
-    int time_cmd;
+    unsigned int time_cmd;
     sprintf(cmd,"AT+FDEFAULT=RISINGHF\r\n");
     time_cmd=at_send_check_response(cmd,"+FDEFAULT: OK",DEFAULT_TIMEWAIT,NULL);
     return(time_cmd);
 }
 
-int LoRaE5Class::initP2PMode(unsigned short frequency,
+unsigned int LoRaE5Class::initP2PMode(unsigned short frequency,
                                _spreading_factor_t spreadingFactor,
                                _band_width_t bandwidth,
                                unsigned char txPreamble,
                                unsigned char rxPreamble, short power) {
-    int time_cmd=0;//Returned time to succesfully execute a command.  
+    unsigned int time_cmd=0;//Returned time to succesfully execute a command.  
     //set device in test mode
     cmd[0]='\0';//reset the string position
     sprintf(cmd, "AT+MODE=TEST\r\n");
@@ -700,8 +699,8 @@ int LoRaE5Class::initP2PMode(unsigned short frequency,
     return(time_cmd);
 }
 
-int LoRaE5Class::transferPacketP2PMode(char *buffer) {
-    int time_ret;
+unsigned int LoRaE5Class::transferPacketP2PMode(char *buffer) {
+    unsigned int time_ret;
     unsigned char length=strlen(buffer);
     #ifdef COMMAND_PRINT_TO_USER
     cmd[0]='\0';//reset the string
@@ -714,10 +713,10 @@ int LoRaE5Class::transferPacketP2PMode(char *buffer) {
     return time_ret;
 }
 
-int LoRaE5Class::transferPacketP2PMode(unsigned char *buffer,
+unsigned int LoRaE5Class::transferPacketP2PMode(unsigned char *buffer,
                                          unsigned char length) {
     int i;
-    int time_ret;
+    unsigned int time_ret;
     #ifdef COMMAND_PRINT_TO_USER
     cmd[0]='\0';//reset the string
     sprintf(cmd,"\r\nSending %i bytes to a another LoRa End Node",(int)length);
@@ -735,7 +734,7 @@ short LoRaE5Class::receivePacketP2PMode(unsigned char *buffer, short length,
                                          short *rssi, unsigned int timeout) {
     char *ptr;
     short number;
-    int time_ret=0;
+    unsigned int time_ret=0;
     cmd[0]='0';//reset the string
     sprintf(cmd," ");//Send an empy command to recieve characters 
     /*recieves all characters and store into "buffer" provided by input function */
@@ -811,32 +810,5 @@ void LoRaE5Class::loraDebug(void) {
         if (SerialLoRa.available()) SerialUSB.write(SerialLoRa.read());
     }
 }
-
-short LoRaE5Class::readLine(char *buffer, short length,
-                             unsigned int timeout) {
-    short i = 0;
-    unsigned long timerStart, timerEnd;
-    char c = '\n';
-
-    timerStart = millis();
-
-    while (1) {
-        if (i < length - 1) {
-            while (SerialLoRa.available()) {
-                c           = SerialLoRa.read();
-                buffer[i++] = c;
-                if (c == '\n') break;
-                timerStart = millis();
-            }
-        }
-        if (c == '\n') break;  // @@@ barf
-        timerEnd = millis();
-        if (timerEnd - timerStart > timeout) break;
-    }
-
-    buffer[i] = 0;  // terminate the string
-    return i;
-}
-
 
 LoRaE5Class lora;
