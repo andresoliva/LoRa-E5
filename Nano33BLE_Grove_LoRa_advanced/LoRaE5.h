@@ -48,7 +48,13 @@ Regarding Transmition time: it was tested and it cannot be measured properly usi
 What you get instead is the transmition time + the time to get ACK from gateway. Because the trnasmition time 
 is included, if you substract the times of two trasmitions with different payloads, it will be the substraction
 of the transmition times. In this way, you can compare the times changes due to the payload size*/
-#define COMMAND_TIME_MEASURE
+#define COMMAND_PRINT_TIME_MEASURE
+/*defined dependensies*/
+#ifdef COMMAND_PRINT_TIME_MEASURE
+  #ifndef COMMAND_PRINT_TO_USER
+    #define COMMAND_PRINT_TO_USER
+  #endif
+#endif  
 
 #define _DEBUG_SERIAL_ 0
 //#define DEFAULT_TIMEOUT 5000 // msecond
@@ -116,7 +122,6 @@ enum _data_rate_t {
     DR14,
     DR15
 };
-
 /*****************************************************************
 Type    DataRate    Configuration   BitRate| TxPower Configuration
 EU434   0           SF12/125 kHz    250    | 0       10dBm
@@ -255,6 +260,14 @@ class LoRaE5Class {
      *  \return Return null.
      */
     unsigned int setKey(char *NwkSKey, char *AppSKey, char *AppKey);
+       /**
+     *  \brief Get the 
+     *
+     *  \param [in] ptr to store the bits per seconds seted on the device
+     *
+     *  \return Return null.
+     */
+    unsigned int getbitRate(unsigned int* bitRate,float* txHead_time);
 
     /**
      *  \brief Set the data rate
@@ -264,8 +277,8 @@ class LoRaE5Class {
      *
      *  \return Return null.
      */
-    unsigned int setDataRate(_data_rate_t dataRate         = DR0,
-                     _physical_type_t physicalType = EU434);
+    unsigned int setDataRate(_data_rate_t dataRate         = DR5,
+                     _physical_type_t physicalType = EU868);
 
     /**
      *  \brief ON/OFF adaptive data rate mode
@@ -303,6 +316,14 @@ class LoRaE5Class {
      *  \return Return null.
      */
     unsigned int getChannel(void);
+    unsigned int setChannel(unsigned char channel);
+    /**
+     *  \brief Set the channel parameter
+     *
+     *  \param [in] channel The channel number, range from 0 to 15
+     *
+     *  \return Return null.
+     */
     unsigned int setChannel(unsigned char channel, float frequency);
     /**
      *  \brief Set the channel parameter
@@ -595,7 +616,7 @@ class LoRaE5Class {
     char recv_buf[BEFFER_LENGTH_MAX];//reception buffer. Commands response can be up to 400 bytes according to data sheet examples
     char cmd[556];//store command to send
     char cmd_resp_ack[64];//store command response ACK to compare with string recieved and thus verify if the command worked. 
-    #ifdef COMMAND_TIME_MEASURE
+    #ifdef COMMAND_PRINT_TIME_MEASURE
     char cmd_time[128];//store commands time response
     #endif
 };

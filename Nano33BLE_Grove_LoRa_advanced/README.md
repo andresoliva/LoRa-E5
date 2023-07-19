@@ -3,4 +3,4 @@ Arduino library for working with the Seeed Studio [Wio-E5 Wireless Module](https
 
 
 ## © License
-This software is written by Ramin Sangesari is licensed under The MIT License.
+This software is written by Andres Oliva Trevisan (a modified version of Ramin Sangesari original work) is licensed under The MIT License.
