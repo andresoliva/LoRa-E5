@@ -23,7 +23,7 @@
 #endif
 #define LoRa_APPKEY              "2B7E151628AED2A609CF4F3CABF71588" /*Custom key for this App*/
 #define LoRa_FREQ_standard       EU868   /*International frequency band. see*/
-#define LoRa_DR                  DR0     /*DR5=5.2kbps //data rate. see at https://www.thethingsnetwork.org/docs/lorawan/regional-parameters/    */
+#define LoRa_DR                  DR4     /*DR5=5.2kbps //data rate. see at https://www.thethingsnetwork.org/docs/lorawan/regional-parameters/    */
 #define LoRa_DEVICE_CLASS        CLASS_A /*CLASS_A for power restriction/low power nodes. Class C for other device applications */
 #define LoRa_PORT_BYTES          8       /*node Port for binary values to send*/
 #define LoRa_PORT_STRING         7       /*node Port for string messagesto send*/
@@ -44,7 +44,7 @@
 
 #define PAYLOAD_FIRST_TX      10   /*bytes to send into first packet*/
 #define PAYLOAD_SECOND_TX     50   /*bytes to send. 50 is the max suggested to avoid the 64 bytes packet restriction de*/
-#define Tx_and_ACK_RX_timeout 6000 /*6000 for SF12,3500 for SF11,3200 for SF11, 2000 for SF9/8/7. All examples consering 50 bytes payload and BW125*/     
+#define Tx_and_ACK_RX_timeout 6000 /*6000 for SF12,4000 for SF11,3000 for SF11, 2000 for SF9/8/, 1500 for SF7. All examples consering 50 bytes payload and BW125*/     
 
 
 unsigned char buffer_binary[128] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9,10,11,12,13,14,15,16,17,18,19,20};
@@ -115,7 +115,7 @@ void loop(void)
    ((float)(PAYLOAD_SECOND_TX-PAYLOAD_FIRST_TX)*8)*1000/LoRa_bps);
    SerialUSB.print(char_temp);//to print the obtained characters
    char_temp[0]='\0';
-   sprintf(char_temp, "\r\nMeasured diference between transmition  %i and %i bytes as payload: %i ms.",PAYLOAD_FIRST_TX,PAYLOAD_SECOND_TX,
+   sprintf(char_temp, "\r\nMeasured diference between transmition  %i and %i bytes as payload: %.1f ms.",PAYLOAD_FIRST_TX,PAYLOAD_SECOND_TX,
    time_tx2-time_tx1);
    SerialUSB.print(char_temp);//to print the obtained characters
   #endif 
