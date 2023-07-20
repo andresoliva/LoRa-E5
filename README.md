@@ -172,7 +172,7 @@ Total Command Time + Time to get ACK response: 1374 ms.
 ```html
 Estimated transmission time of messages with 10 and 50 bytes as payload: 108.0 ms, 210.4 ms.
 Calculated time difference between transmitting 10 and 50 bytes as payload: 102.4 ms.
-Measured difference between transmitting  10 and 50 bytes as payload: 102.4 ms.
+Measured difference between transmitting with 10 and 50 bytes as payload: 102.4 ms.
 ```
 ## To test
   * Meassure power consumption in low power mode.
