@@ -41,8 +41,24 @@ of the transmission times. In this way, you can compare the times changes due to
 #define COMMAND_PRINT_TIME_MEASURE
 ```
 ## Proyect important configuration:
+Inside Grove-Wio-E5_advanced.ino
 #### Custom DevEUI
-#### Printing
+```html
+/*To set a custom DEVUI if needed for facilitate testing*/
+#define LoRa_DEVEUI_CUSTOM "2CF7F1C0440004A2" //Custom key for this App. You can generate one at https://www.thethingsnetwork.org/docs/devices/registration/
+```
+#### Print messages in the main project 
+```html
+#define PRINT_TO_USER                   /*To allow the printing of characters using UART*/
+```
+#### Print difference in transmission time based on packet payload size (see Example brief explanation:)
+```html
+#define PRINT_TO_USER_TIME_difference /*To allow the printing of time difference message*/
+```
+#### Debug mode
+```html
+#define LORA_DEBUG_AND_PRINT          /*Enables the debug mode of the device and allows serial printing of the content*/
+```
 ## Example brief explanation:
 The implemented example consists of:
 * A complete set-up of the device in order to work with a EU868 LoRa Gateway in OTA mode. So you must add the DevEUI and settled AppKey of your device to the gateway in order to work like it was done in SeedStudio's original example (https://wiki.seeedstudio.com/Grove_LoRa_E5_New_Version/#ttn-console-configuration-setup).
