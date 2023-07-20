@@ -15,9 +15,10 @@ This LoRa library is a modified version of the Ramin Sangesari (https://github.c
 * Added an example to change the DevEUI of the device in order to make the testing of different codes simpler when interacting with a LoRa Gateway.
 ## Hardware Setup:
 Same as featured in https://github.com/andresoliva/Grove-Wio-E5 . But in this case you
-##
+## Gateway setup
 AppKey value: 2B7E151628AED2A609CF4F3CABF71588
 ## LoRa library important configuration:
+Here are listed some parts of the project file that allows you to set up this configuration.
 #### LoRa.h Serial port selection
 ```html
 /*If you want to use other pins as serial interfaces in boards like Arduino Nano BLE33 which does not support the
@@ -39,6 +40,9 @@ is included, if you subtract the times of two transmissions with different paylo
 of the transmission times. In this way, you can compare the times changes due to the payload size and know what to spect*/
 #define COMMAND_PRINT_TIME_MEASURE
 ```
+## Proyect important configuration:
+#### Custom DevEUI
+#### Printing
 ## Example brief explanation:
 The implemented example consists of:
 * A complete set-up of the device in order to work with a EU868 LoRa Gateway in OTA mode. So you must add the DevEUI and settled AppKey of your device to the gateway in order to work like it was done in SeedStudio's original example (https://wiki.seeedstudio.com/Grove_LoRa_E5_New_Version/#ttn-console-configuration-setup).
