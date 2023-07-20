@@ -47,10 +47,11 @@ of the transmission times. In this way, you can compare the times changes due to
 The implemented example consists of:
 * A complete set-up of the device in order to work with a EU868 LoRa Gateway in OTA mode. So you must add the DevEUI and settled AppKey of your device to the gateway in order to work like it was done in SeedStudio's original example (https://wiki.seeedstudio.com/Grove_LoRa_E5_New_Version/#ttn-console-configuration-setup).
 * The device will not send any packet until it joins the network. And this will only happen if you set your device properly to communicate with your Gateway by selecting the same Frequency band and configuring in the Gateway the DevEUI and settled AppKey.
-* A loop transmission of one string packet and two hex packet
-* A comparison between the expected differences in time
+* A loop transmission of one string packet (with port 7) and two hex packets (with port 8). The use of different ports allow the Gateway to decode the packet contents according to the content (bytes or string)
+* A comparison between the expected differences in time when transmitting messages with 10 and 50 bytes of payload.
 * Entering Low Power and Wake up functions to optimize performance.
-### Initial setup expected responses
+### Commands expected responses
+Here goes a list of what you should be seeing in your terminal based on this project configuration.
 #### Initial set Up
 ```html
 --------Command sent:
