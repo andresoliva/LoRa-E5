@@ -1,7 +1,5 @@
 # Grove-Wio-E5_advanced
 Advanced application of SeedStudio module Grove-Wio-E5 based on chip STM32WLE5JC from STM connected to an Arduino Nano 33 BLE Sense board.
-### Grove-Wio-E5 commands list:
-https://files.seeedstudio.com/products/317990687/res/LoRa-E5%20AT%20Command%20Specification_V1.0%20.pdf
 ## Features:
 This project features a LoRa library in order to perform a complete configuration of the Grove-Wio-E5 according to the user needs.
 This LoRa library is a modified version of the Ramin Sangesari (https://github.com/idreamsi/LoRaE5) with some rework in order to optimize the performance and add some useful functionalities. Is important to know that Ramin Sangesari's work supports P2P communication between LoRa node devices (this means that communications happen directly between both end node devices without any Gateway involved in the communication).
@@ -67,7 +65,7 @@ The implemented example consists of:
 * A comparison between the expected differences in time when transmitting messages with 10 and 50 bytes of payload.
 * Entering Low Power and Wake up functions to optimize performance.
 ### Commands expected responses
-Here goes a list of what you should be seeing in your terminal based on this project configuration.
+Here goes a list of what you should be seeing in your terminal based on this project configuration. You can see the  Grove-Wio-E5 commands list here for more information:https://files.seeedstudio.com/products/317990687/res/LoRa-E5%20AT%20Command%20Specification_V1.0%20.pdf
 #### Initial set Up
 ```html
 --------Command sent:
@@ -201,6 +199,20 @@ Estimated transmission time of messages with 10 and 50 bytes as payload: 108.0 m
 Calculated time difference between transmitting 10 and 50 bytes as payload: 102.4 ms.
 Measured difference between transmitting with 10 and 50 bytes as payload: 102.4 ms.
 ```
+## Gateway setup
+Take into mind I am using a . So the field configuration can be different to the one used in the SeeD examples/
+#### Create an App Code
+#### Create an App Code
+#### Create an App Code
+#### Wrap all together
+#### Payload Code
+Here is the code used to decode de messages
+```html
+Estimated transmission time of messages with 10 and 50 bytes as payload: 108.0 ms, 210.4 ms.
+Calculated time difference between transmitting 10 and 50 bytes as payload: 102.4 ms.
+Measured difference between transmitting with 10 and 50 bytes as payload: 102.4 ms.
+```
+#### Packet Reception verification
 ## To test
   * Meassure power consumption in low power mode.
   * Re-test P2P communication after library rework
