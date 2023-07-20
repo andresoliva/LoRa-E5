@@ -31,6 +31,7 @@
 /*COMMAND LIST AND EXAMPLES*/
 //https://files.seeedstudio.com/products/317990687/res/LoRa-E5%20AT%20Command%20Specification_V1.0%20.pdf
 #include "LoRaE5.h"
+
 const char *physTypeStr[10] = {"EU434",        "EU868", "US915", "US915HYBRID",
                                "AU915",        "AS923", "CN470", "KR920",
                                "CN470PREQUEL", "STE920"};
@@ -38,19 +39,30 @@ const char *physTypeStr[10] = {"EU434",        "EU868", "US915", "US915HYBRID",
 LoRaE5Class::LoRaE5Class(void) {
 
 }
+/*SERIAL CUSTOM MODE
+link: https://forum.arduino.cc/t/third-serial-on-nano-33-ble-can-be-software/929047/10  */
+#ifdef CUSTOM_LORA_SERIAL
+ UART SerialLoRa(CUSTOM_LORA_SERIAL_TX_PIN,CUSTOM_LORA_SERIAL_RX_PIN);
+#endif
 
-void LoRaE5Class::init(void) {         //For Hardware Serial
-    SerialLoRa.begin(9600);             //For SAMD Variant and XIAO NRF
+void LoRaE5Class::init(void) {                    //For Hardware Serial
+    SerialLoRa.begin(9600); 
 }
-
-void LoRaE5Class::init(uint8_t rx, uint8_t tx) {      //For Custom Serial
-    #if defined(ESP32)
-        SerialLoRa.begin(9600, SERIAL_8N1, rx, tx); //M5Stack ESP32 Camera Module Development Board 
+void LoRaE5Class::init(uint8_t rx, uint8_t tx) {
+    /*if using software serial on your board (define CUSTOM_SERIAL_TX_PIN)*/
+    #ifdef CUSTOM_LORA_SERIAL     
+        SerialLoRa.begin(9600,SERIAL_8N1);   /*For software LoRa serial*/    
     #else
-        SerialLoRa.begin(9600, rx,tx); //M5Stack ESP32 Camera Module Development Board 
- //       SerialLoRa.begin(9600);   
-    #endif
+     /*default*/
+      #if defined(ESP32)
+        SerialLoRa.begin(9600, SERIAL_8N1, rx, tx); //M5Stack ESP32 Camera Module Development Board 
+      #else
+        SerialLoRa.begin(9600);             //For SAMD Variant and XIAO NRF    
+      #endif
+    #endif  
 }
+
+  
 
 
 unsigned int LoRaE5Class::readBuffer(char* buffer, unsigned int length, unsigned int timeout_ms){
@@ -72,7 +84,7 @@ delay(timeout_ms);//Sleep for this period until attempting to read
             buffer[index++] = ch; //add the character
             if (index>=length){break;}//protect a buffer overflow
             }
-  //     }//commented: not used at the moment
+  //     }//commented: not used at the moment 
 return(index);//return the amount of bytes read    
 }
 unsigned int LoRaE5Class::at_send_check_response(char* p_cmd, char* p_ack, unsigned int timeout_ms,char* p_response){
@@ -113,7 +125,6 @@ unsigned int LoRaE5Class::at_send_check_response(char* p_cmd, char* p_ack, unsig
             ch = SerialLoRa.read();
             recv_buf[index++] = ch; //add the character
             //begin with times callculation
-            #ifdef COMMAND_PRINT_TIME_MEASURE
               /*Reception ACK wait time*/
               if (tx_and_rx_ACK_time==0){
                 if (strstr(recv_buf, "Wait ACK") != NULL){ tx_and_rx_ACK_time=millis();}
@@ -121,11 +132,12 @@ unsigned int LoRaE5Class::at_send_check_response(char* p_cmd, char* p_ack, unsig
               if(tx_and_rx_ACK_time>0){
                 if (strstr(recv_buf, "ACK Received") != NULL){
                   tx_and_rx_ACK_time=millis() - tx_and_rx_ACK_time;
+                  #ifdef COMMAND_PRINT_TIME_MEASURE
                   sprintf(cmd_time+strlen(cmd_time),"\r\nTime to Transmit message and Recieve ACK from TX message: %i ms.",tx_and_rx_ACK_time);
+                  #endif 
                   tx_and_rx_ACK_time=-1;//indicates the program to stop this parsing 
                 }
-              }
-            #endif     
+              }    
         /*check if the command sended was acknowledged properly*/
         if (strstr(recv_buf, p_ack) != NULL) {
             ret_val= millis() - startMillis;//returns command execution time
@@ -146,12 +158,12 @@ unsigned int LoRaE5Class::at_send_check_response(char* p_cmd, char* p_ack, unsig
       /*add the time used to print*/
       if (ret_val>0){sprintf(cmd_time+strlen(cmd_time),"\r\nTotal Command Time + Time to get ACK response: %i ms.",ret_val);}
       /*print the accumulated message*/
-      if(strlen(cmd_time)>0){SerialUSB.print(cmd_time);}//print if something was written
+      if(strlen(cmd_time)>0){SerialUSB.print(cmd_time);}/*print if something was written*/
       #endif
       #ifdef COMMAND_PRINT_TO_USER
-      if(ret_val==0){SerialUSB.print("\r\n!!Command Failed!! Did not get expected \"Ok\" or \"ACK\" response from E5 module after sending the command.");}
+      if(ret_val==0){SerialUSB.print("\r\n!!Command Failed!! Did not get the expected \"Ok\" or \"ACK\" response from E5 module after sending the command.");}
       #endif
-    //----------------------
+    /*---------------------------------------*/
     /*if a buffer was provided, copy the response to the buffer */
     if (not(p_response == NULL)) { strcpy(p_response, recv_buf);}  
     /*end of code: return cmd elapsed time in ms or 0 if did not work */
@@ -174,17 +186,17 @@ unsigned int LoRaE5Class::setId(char *DevAddr, char *DevEUI, char *AppEUI) {
     if (DevAddr) {
         memset(cmd, 0, 64);
         sprintf(cmd, "AT+ID=DevAddr,\"%s\"\r\n", DevAddr);
-        time_cmd=+at_send_check_response(cmd,"+ID: DevAddr",DEFAULT_TIMEOUT,NULL);
+        time_cmd=+at_send_check_response(cmd,AT_NO_ACK,DEFAULT_TIMEWAIT*2,NULL);
     }
     if (DevEUI) {
         memset(cmd, 0, 64);
         sprintf(cmd, "AT+ID=DevEui,\"%s\"\r\n", DevEUI);
-        time_cmd=+at_send_check_response(cmd,"+ID: DevEui",DEFAULT_TIMEOUT,NULL);
+        time_cmd=+at_send_check_response(cmd,AT_NO_ACK,DEFAULT_TIMEWAIT*2,NULL);
     }
     if (AppEUI) {
         memset(cmd, 0, 64);
         sprintf(cmd, "AT+ID=AppEui,\"%s\"\r\n", AppEUI);
-        time_cmd=+at_send_check_response(cmd,"+ID: AppEui",DEFAULT_TIMEOUT,NULL);
+        time_cmd=+at_send_check_response(cmd,AT_NO_ACK,DEFAULT_TIMEWAIT*2,NULL);
     }
     return(time_cmd);
 }
@@ -199,29 +211,30 @@ unsigned int LoRaE5Class::setKey(char *NwkSKey, char *AppSKey, char *AppKey) {
     if (NwkSKey) {
         cmd[0]='\0';//reset the string position
         sprintf(cmd, "AT+KEY=NWKSKEY,\"%s\"\r\n", NwkSKey);
-        time_cmd=+at_send_check_response(cmd,"+KEY: NWKSKEY",DEFAULT_TIMEOUT,NULL);
+        time_cmd=+at_send_check_response(cmd,AT_NO_ACK,DEFAULT_TIMEWAIT*2,NULL);
     }
 
     if (AppSKey) {
         cmd[0]='\0';//reset the string position
         sprintf(cmd, "AT+KEY=APPSKEY,\"%s\"\r\n", AppSKey);
-        time_cmd=+at_send_check_response(cmd,"+KEY: APPSKEY",DEFAULT_TIMEOUT,NULL);
+        time_cmd=+at_send_check_response(cmd,AT_NO_ACK,DEFAULT_TIMEWAIT*2,NULL);
     }
 
     if (AppKey) {
         cmd[0]='\0';//reset the string position
         sprintf(cmd, "AT+KEY= APPKEY,\"%s\"\r\n", AppKey);
-        time_cmd=+at_send_check_response(cmd,"+KEY: APPKEY",DEFAULT_TIMEOUT,NULL);
+        time_cmd=+at_send_check_response(cmd,AT_NO_ACK,DEFAULT_TIMEWAIT*2,NULL);
     }
     return(time_cmd);
 }
-unsigned int LoRaE5Class::getbitRate(unsigned int* bitRate,float* txHead_time) {
+unsigned int LoRaE5Class::getbitRate(unsigned int* pbitRate,float* ptxHead_time) {
     unsigned int time_cmd=0;
     cmd[0]='\0';//reset the string position
     cmd_resp_ack[0]='\0';//reset the string position
     char substr[20];//16 is max size, we use 20 just in case.
     char* pstr;
     unsigned char scale=4;
+    /*Send command to get bitRate*/
     sprintf(cmd, "AT+DR\r\n");
     time_cmd=+at_send_check_response(cmd,AT_NO_ACK,DEFAULT_TIMEWAIT,NULL);
     /*Example of expected response to be contained in recv_buf
@@ -244,40 +257,43 @@ unsigned int LoRaE5Class::getbitRate(unsigned int* bitRate,float* txHead_time) {
              substr[sizeof(substr)-1]='\0';//add the end of the string
             }
         }
-    //set scale value based on BW
+    /*set scale value based on BW*/
     if(strstr(substr, "BW500")!= NULL){scale=4;}
     if(strstr(substr, "BW250")!= NULL){scale=2;}
     if(strstr(substr, "BW125")!= NULL){scale=1;}
-    //Set value of return based on SF and BW
+    /*Set value of return based on SF and BW*/
     if(strstr(substr,"SF12")!= NULL){
-      *bitRate=250*scale;
-      *txHead_time=1115.1/scale;
+      bitRate=250*scale;
+      txHead_time=1115.1/scale;
       }
     if(strstr(substr,"SF11")!= NULL){
-      *bitRate=440*scale;
-      *txHead_time=577.5/scale;
+      bitRate=440*scale;
+      txHead_time=577.5/scale;
       }
     if(strstr(substr,"SF10")!= NULL){
-      *bitRate=980*scale;
-      *txHead_time=288.8/scale;
+      bitRate=980*scale;
+      txHead_time=288.8/scale;
       }
     if(strstr(substr,"SF9")!= NULL){
-      *bitRate=1760*scale;
-      *txHead_time=164.9/scale;
+      bitRate=1760*scale;
+      txHead_time=164.9/scale;
       }
     if(strstr(substr,"SF8")!= NULL){
-      *bitRate=3125*scale;
-      *txHead_time=82.4/scale;
+      bitRate=3125*scale;
+      txHead_time=82.4/scale;
       }     
     if(strstr(substr,"SF7")!= NULL){
-      *bitRate=5470*scale;
-      *txHead_time=46.3/scale;
+      bitRate=5470*scale;
+      txHead_time=46.3/scale;
       }
     /*especial case: 50 kbps with FSK modulation instead of LoRa*/  
     if(strstr(substr,"50kbps")!= NULL){
-      *bitRate=50000;
-      *txHead_time=0;/*We use 0 because I could not find his value in the network.*/
-      }  
+      bitRate=50000;
+      txHead_time=0;/*We use 0 because I could not find his value in the network.*/
+      }
+    /*if pointers were provided, store the values     */
+     if (!(pbitRate==NULL)){*pbitRate=bitRate;}//Stores the value if a pointer was provided
+     if (!(ptxHead_time==NULL)){*ptxHead_time=txHead_time;}//Stores the value if a pointer was provided
     /*return the command time*/       
     return time_cmd;
 }
@@ -288,7 +304,9 @@ unsigned int LoRaE5Class::setDataRate(_data_rate_t dataRate,
     unsigned int time_cmd=0;
 
     if ((physicalType <= UNINIT) && (physicalType >= UNDEF)) {
+        #ifdef COMMAND_PRINT_TO_USER
         SerialUSB.print("\r\n!!Unknown datarate\n");
+        #endif
         return 0;
     }
     // set frequency band first
@@ -341,7 +359,7 @@ unsigned int LoRaE5Class::setAdaptiveDataRate(bool command) {
 
 unsigned int LoRaE5Class::getChannel(void) {
     unsigned int time_cmd=0;
-        cmd_resp_ack[0]='\0';
+    cmd_resp_ack[0]='\0';
     cmd[0]='\0';//reset the string position
     sprintf(cmd,"AT+CH\r\n");
     sprintf(cmd_resp_ack, "+ADR: ON");
@@ -353,8 +371,8 @@ unsigned int LoRaE5Class::setChannel(unsigned char channel) {
     cmd_resp_ack[0]='\0';
     cmd[0]='\0';//reset the string position
     sprintf(cmd, "AT+CH=%d\r\n", channel);
-    sprintf(cmd_resp_ack, "+CH: %d", channel);
-    time_cmd=at_send_check_response(cmd,cmd_resp_ack,DEFAULT_TIMEWAIT,NULL);// returns 0 if the command was not ACK by Gateway.
+    // sprintf(cmd_resp_ack, "+CH: %d", channel); //"+CH: %d" //to know is ok
+    time_cmd=at_send_check_response(cmd,AT_NO_ACK,DEFAULT_TIMEWAIT,NULL);// returns 0 if the command was not ACK by Gateway.
 }
 unsigned int LoRaE5Class::setChannel(unsigned char channel, float frequency) {
     unsigned int time_cmd=0;
@@ -697,7 +715,9 @@ unsigned int LoRaE5Class::setClassType(_class_type_t type) {
            class_X='A';
            }
            else { 
-              SerialUSB.print( "\r\nInvalid value for setClassType"); 
+              #ifdef COMMAND_PRINT_TO_USER
+              SerialUSB.print( "\r\nInvalid value for setClassType");
+              #endif 
               return 0;
              } 
           }    
@@ -721,7 +741,11 @@ unsigned int LoRaE5Class::setDeviceMode(_device_mode_t mode) {
         sprintf(cmd,"AT+MODE=LWOTAA\r\n");
         time_cmd=at_send_check_response(cmd,"+MODE: LWOTAA",timeout,NULL);
        }
-    else SerialUSB.print("\r\nBad command to setDeviceMode.");   
+    else {
+              #ifdef COMMAND_PRINT_TO_USER
+                 SerialUSB.print("\r\nBad command to setDeviceMode.");   
+               #endif  
+    }
     return time_cmd;//Returned time to succesfully execute a command. 0 if the command was not ACK by Gateway.
 }
 
@@ -740,7 +764,11 @@ unsigned int LoRaE5Class::setOTAAJoin(_otaa_join_cmd_t command,
         sprintf(cmd,"AT+JOIN\r\n");
         time_cmd=at_send_check_response(cmd,"+JOIN: Network joined",timeout,NULL);
        }
-    else SerialUSB.print("Bad command to setOTAAJoin\n");
+    else {
+          #ifdef COMMAND_PRINT_TO_USER
+            SerialUSB.print("Bad command to setOTAAJoin\n");
+           #endif 
+           }
     return time_cmd;//Returned time to succesfully execute a command. 0 if the command was not ACK by Gateway.
 }
 
@@ -754,8 +782,8 @@ unsigned int LoRaE5Class::setDeviceLowPower(void) {
 unsigned int LoRaE5Class::setDeviceWakeUp(void) {
     unsigned int time_cmd=0;//Returned time to succesfully execute a command. 
     cmd[0]='\0';//reset the string position
-    sprintf(cmd,"AT\r\n");
-    time_cmd=at_send_check_response(cmd,"+LOWPOWER: WAKEUP",DEFAULT_TIMEWAIT,NULL);
+    sprintf(cmd,"AT+\r\n");
+    time_cmd=at_send_check_response(cmd,"WAKEUP",DEFAULT_TIMEWAIT,NULL);
     return(time_cmd);
 }
 //
@@ -886,34 +914,28 @@ short LoRaE5Class::receivePacketP2PMode(unsigned char *buffer, short length,
 
     return number;
 }
+unsigned int LoRaE5Class::Debug(_debug_level value){
+   unsigned int time_cmd;
+   char val[8];
+   if (value==lora_DEBUG){sprintf(val,"DEBUG");}
+   if (value==lora_INFO){sprintf(val,"INFO");}
+   if (value==lora_WARN){sprintf(val,"WARN");}
+   if (value==lora_FATAL){sprintf(val,"FATAL");}
+   if (value==lora_PANIC){sprintf(val,"PANIC");}
+   if (value==lora_QUIET){sprintf(val,"QUIET");}
+   //***********
+   cmd[0]='\0';//reset the string position
+   sprintf(cmd, "AT+LOG=%s\r\n",val);
+   time_cmd=+at_send_check_response(cmd,AT_NO_ACK,DEFAULT_TIMEWAIT,NULL);
+   return(time_cmd);
+}         
 
-// short LoRaE5Class::getBatteryVoltage(void)
-// {
-//     int battery;
-
-//     pinMode(CHARGE_STATUS_PIN, OUTPUT);
-//     digitalWrite(CHARGE_STATUS_PIN, LOW);
-//     delay(DEFAULT_TIMEWAIT);
-//     battery = (analogRead(BATTERY_POWER_PIN) * 3300 * 11) >> 10;
-//     pinMode(CHARGE_STATUS_PIN, INPUT);
-
-//     return battery;
-// }
-
-// ??? I think this essentially connects the serial port to the LoRa module.
-// @@@ typing a "~" will exit
-//
-void LoRaE5Class::loraDebug(void) {
-    char c;
-
-    while (true) {
-        if (SerialUSB.available()) {
-            c = SerialUSB.read();
-            if (c == '~') return;
-            SerialLoRa.write(c);
-        }
-        if (SerialLoRa.available()) SerialUSB.write(SerialLoRa.read());
-    }
-}
-
+unsigned int LoRaE5Class::readbitRate(void){
+        return(bitRate);
+      }
+      
+float LoRaE5Class::readtxHead_time(void){
+      return(txHead_time);
+      }            
+      
 LoRaE5Class lora;

@@ -28,50 +28,63 @@
 #define _LORAE5_H_
 /*COMMAND LIST AND EXAMPLES*/
 //https://files.seeedstudio.com/products/317990687/res/LoRa-E5%20AT%20Command%20Specification_V1.0%20.pdf
-#include <Arduino.h>
-
-#define SerialUSB  Serial
-
-#if defined(ESP32)
-	#define SerialLoRa Serial2		//M5Stack ESP32 Camera Module Development Board
-#else
-	#define SerialLoRa Serial1		//For SAMD Variant and XIAO NRF
-#endif
-
-#define AT_NO_ACK "NO_ACK"  //For not checking the command response in order to send a command error
-/*Define to print to the USER into UART terminal the commands messages sended and response recieved */
+/*--------------PRINT TIME --------------------------**/
+/*Define to print to the USER into UART terminal the commands messages sent and response received */
+/*--------------PRINT TIME --------------------------**/
+/*Define to print to the USER into UART terminal the commands messages sent and response received */
 #define COMMAND_PRINT_TO_USER
-/*Define to measure time and print the result
-Important Note: THis time is measured using
-because of this, this is only an stimation
+/*Define to print the result of times measures
+Important Note: This time is measured using because of this, this is only an estimation
 Regarding Transmition time: it was tested and it cannot be measured properly using this method
-What you get instead is the transmition time + the time to get ACK from gateway. Because the trnasmition time 
-is included, if you substract the times of two trasmitions with different payloads, it will be the substraction
-of the transmition times. In this way, you can compare the times changes due to the payload size*/
+What you get instead is the transmission time + the time to get ACK from the gateway. Because the transmission time 
+is included, if you subtract the times of two transmissions with different payloads, it will be the subtraction
+of the transmission times. In this way, you can compare the times changes due to the payload size and know what to spect*/
 #define COMMAND_PRINT_TIME_MEASURE
-/*defined dependensies*/
+/****SERIAL SELECTOR****/
+/*If you want to use other pins as serial interfaces in boards like Arduino Nano BLE33 which does not support the
+"SerialLoRa.begin(9600, SERIAL_8N1, rx, tx)" function call, enable this: */
+//#define CUSTOM_LORA_SERIAL
+#define CUSTOM_LORA_SERIAL_TX_PIN A4 //example for using other pins as Tx    
+#define CUSTOM_LORA_SERIAL_RX_PIN A5 //examples for using other pins as Rx
+
+/*defines dependensies to avoid a CRASH of the program*/
 #ifdef COMMAND_PRINT_TIME_MEASURE
   #ifndef COMMAND_PRINT_TO_USER
     #define COMMAND_PRINT_TO_USER
   #endif
 #endif  
+/*SERIAL PORT DEFINITION BASED ON PLATFORM**/
+#include <Arduino.h>
+#ifdef COMMAND_PRINT_TO_USER
+ #define SerialUSB  Serial
+#endif 
+/*If you are not using Custom Serial, make this define */
+#ifndef CUSTOM_LORA_SERIAL
+  #if defined(ESP32)
+    #define SerialLoRa Serial2    //M5Stack ESP32 Camera Module Development Board
+  #else
+    #define SerialLoRa Serial1    //For SAMD Variant and XIAO NRF
+  #endif
+#endif
 
-#define _DEBUG_SERIAL_ 0
-//#define DEFAULT_TIMEOUT 5000 // msecond
-#define DEFAULT_TIMEOUT   3000  // msecond
-#define DEFAULT_TIMEWAIT \
-    100  // milliseconds to wait after issuing command via serial
-#define DEFAULT_DEBUGTIME \
-    500  // milliseconds to wait for a response after command
+#define DEFAULT_TIMEOUT   3000  //milliseconds to max wait for a command to get a response
+#define DEFAULT_TIMEWAIT  100  //DO NOT CHANGE: milliseconds to wait after issuing command via serial and not getting an specific response
 
-// #define BATTERY_POWER_PIN    A4
-// #define CHARGE_STATUS_PIN    A5
+#define AT_NO_ACK "NO_ACK"  //For not checking the command response in order to send a command error
 
+//*******************************//
 #define BEFFER_LENGTH_MAX 512   //reception buffer size. Commands response can be up to 400 bytes according to data sheet examples
-
 #define MAC_COMMAND_FLAG "MACCMD:"
 #define kLOCAL_BUFF_MAX  64
 
+enum _debug_level{
+   lora_DEBUG=0,
+   lora_INFO,
+   lora_WARN,
+   lora_ERROR,
+   lora_FATAL,
+   lora_PANIC,
+   lora_QUIET};
 enum _class_type_t { CLASS_A = 0, CLASS_C };
 enum _physical_type_t {
     UNINIT = -1,
@@ -267,7 +280,7 @@ class LoRaE5Class {
      *
      *  \return Return null.
      */
-    unsigned int getbitRate(unsigned int* bitRate,float* txHead_time);
+    unsigned int getbitRate(unsigned int* pbitRate,float* ptxHead_time);
 
     /**
      *  \brief Set the data rate
@@ -597,22 +610,19 @@ class LoRaE5Class {
      */
     short receivePacketP2PMode(unsigned char *buffer, short length, short *rssi,
                                unsigned int timeout = DEFAULT_TIMEOUT);
-
     /**
      *  \brief LoRaWAN raw data
      *
      *  \return Return null
      */
-    void loraDebug(void);
-
-    /**
-     *  \brief Read battery voltage
-     *
-     *  \return Return battery voltage
-     */
-    // short getBatteryVoltage(void);
-
+    unsigned int Debug(_debug_level value);
+    /*Returns the last adquired bitRate by the last call of "getbitRate" */
+    unsigned int readbitRate(void);
+    /*Returns the last adquired txHead_time (time used to transmit LoRa message Header) by the last call of "getbitRate" */
+    float        readtxHead_time(void);
    private:
+    unsigned int bitRate; /*set only by "getbitRate" function. Must be called before reading this variable */
+    float txHead_time;   /*set only by "getbitRate" function Must be called before reading this variable*/
     char recv_buf[BEFFER_LENGTH_MAX];//reception buffer. Commands response can be up to 400 bytes according to data sheet examples
     char cmd[556];//store command to send
     char cmd_resp_ack[64];//store command response ACK to compare with string recieved and thus verify if the command worked. 
