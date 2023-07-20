@@ -8,7 +8,7 @@ This LoRa library is a modified version of the Ramin Sangesari (https://github.c
 ### Key features added:
 * Allows to make the use of SoftwareSerial (or SoftwareUART) on boards like Arduino Nano 33BLE by using macros. This is useful if you are using a Grove shield that uses your main serial and you need to use other pins of your board as a Serial interface to communicate with the Grove-Wio-E5 module.
 * Allows to display commands sent, the responses from the Grove-Wio-E5 and enable the print them. Also allows the device to measure the time it took to both send the command and receive a response from Grove-Wio-E5 (and gateway ACK if there is a need for that)
-* You can enable or disable the printing of the command messages
+* You can enable or disable the printing of the command messages. This means that you can run the code with your debugging serial terminal disabled
 * Allows the use of the different debug modes (DEBUG/INFO/WARN/ERROR/FATAL/PANIC/QUIET).
 * Allows to estimate the time that is going to take to send a message.
 * Added examples of how to use the low power mode of the device and added a wakeUp function.
@@ -20,10 +20,24 @@ AppKey value: 2B7E151628AED2A609CF4F3CABF71588
 ## Configuration:
 #### LoRa.h Serial port selection
 ```html
-/*If you want to use other pins as a serial in boards like Arduino Nano BLE33 which does not support the , enable this: */
+/*If you want to use other pins as serial interfaces in boards like Arduino Nano BLE33 which does not support the
+"SerialLoRa.begin(9600, SERIAL_8N1, rx, tx)" function call, enable this: */
 #define CUSTOM_LORA_SERIAL
-#define CUSTOM_LORA_SERIAL_TX_PIN A4 //example for using other pins  as Tx    
+#define CUSTOM_LORA_SERIAL_TX_PIN A4 //example for using other pins as Tx    
 #define CUSTOM_LORA_SERIAL_RX_PIN A5 //examples for using other pins as Rx
+```
+#### LoRa.h Serial port selection
+```html
+/*--------------PRINT TIME --------------------------**/
+/*Define to print to the USER into UART terminal the commands messages sent and response received */
+#define COMMAND_PRINT_TO_USER
+/*Define to print the result of times measures
+Important Note: This time is measured using because of this, this is only an estimation
+Regarding Transmition time: it was tested and it cannot be measured properly using this method
+What you get instead is the transmission time + the time to get ACK from the gateway. Because the transmission time 
+is included, if you subtract the times of two transmissions with different payloads, it will be the subtraction
+of the transmission times. In this way, you can compare the times changes due to the payload size and know what to spect*/
+#define COMMAND_PRINT_TIME_MEASURE
 ```
 ## Features examples:
 ### Initial setup expected responses
