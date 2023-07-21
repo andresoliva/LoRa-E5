@@ -50,8 +50,11 @@ void LoRaE5Class::init(void) {                    //For Hardware Serial
 }
 void LoRaE5Class::init(uint8_t rx, uint8_t tx) {
     /*if using software serial on your board (define CUSTOM_SERIAL_TX_PIN)*/
-    #ifdef CUSTOM_LORA_SERIAL     
-        SerialLoRa.begin(9600,SERIAL_8N1);   /*For software LoRa serial*/    
+    #ifdef CUSTOM_LORA_SERIAL
+        #ifdef PRINT_TO_USER 
+        Serial.print("\r\nIMPORTANT: RUNNING serial port used with LoRa communication as a SoftwareSerial");/*to print the obtained characters*/
+        #endif 
+        SerialLoRa.begin(9600,SERIAL_8N1);   /*For software LoRa serial*/     
     #else
      /*default*/
       #if defined(ESP32)

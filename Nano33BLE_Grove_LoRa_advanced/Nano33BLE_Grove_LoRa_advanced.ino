@@ -11,8 +11,8 @@
 //---------------------
 /**USER OPTIONS/
 #define PRINT_TO_USER                   /*To allow the printing of characters using UART*/
-//#define PRINT_TO_USER_TIME_difference    /*To allow the printing of time difference message*/
-//#define LORA_DEBUG_AND_PRINT           /*Enables the debug mode of the device and allow serial printing*/
+//#define PRINT_TO_USER_TIME_difference /*To allow the printing of time difference message*/
+//#define LORA_DEBUG_AND_PRINT          /*Enables the debug mode of the device and allow serial printing*/
 /*To set a custom DEVUI if needed for facilitate testing*/
 #define LoRa_DEVEUI_CUSTOM "2CF7F1C0440004A2" //Custom key for this App. You can generate one at https://www.thethingsnetwork.org/docs/devices/registration/
 /*******************************************************************************************************/
@@ -28,7 +28,7 @@
 #define LoRa_CHANNEL             2       /*Node selected Tx channel. Default is 0, we use 2 to show only to show how to set up*/
 #define LoRa_ADR_FLAG            false   /*ADR(Adaptative Dara Rate) status flag (True or False). Use False if your Node is moving*/
 /*Time to wait for transmiting a packet again*/
-#define Tx_delay_s               9.5     /*delay between transmitions expressed in seconds*/
+#define Tx_delay_s               599.5     /*delay between transmitions expressed in seconds*/
 /*Packet information*/
 #define PAYLOAD_FIRST_TX         10   /*bytes to send into first packet*/
 #define PAYLOAD_SECOND_TX        50   /*bytes to send. 50 is the max suggested to avoid the 64 bytes packet restriction de*/
@@ -87,7 +87,7 @@ void setup(void){
   #if (defined(PRINT_TO_USER)|defined(COMMAND_PRINT_TO_USER))/*ensure this to support the print of messages*/
   Serial.begin(115200);/*Init Print Serial Port*/
   #endif
-  /*Init the Lora*/
+  /*Init the LoRa class after initing the serial print port */
   lora.init();/* call lora.init(Tx_pin,Rx_pin) if your board support Software Serial https://docs.arduino.cc/learn/built-in-libraries/software-serial
   /*Wake Up the LoRa module*/
   lora.setDeviceWakeUp();/*if the module is not in sleep state, this command does nothing*/
