@@ -1,5 +1,9 @@
 # LoRa-E5 Library
 Advanced application of SeedStudio module Grove-Wio-E5 based on chip STM32WLE5JC from STM connected to an Arduino Nano 33 BLE Sense board.
+### Easy install and start
+* Download this repository
+* Open your Arduino IDE. Go to Sketch-> Include Library -> add.zip library... .Then select your LoRa-E5-main.zip file in your 
+* Go to File-> Examples. Scroll down until you find "Examples for Custom libraries". Below you should find "LoRa_E5". Select Grove-Wio-E5_basic to start.
 ## Features:
 This project features a LoRa library in order to perform a complete configuration of the Grove-Wio-E5 according to the user needs.
 This LoRa library is a modified version of the Ramin Sangesari (https://github.com/idreamsi/LoRaE5) with some rework in order to optimize the performance and add some useful functionalities. Is important to know that Ramin Sangesari's work supports P2P communication between LoRa node devices (this means that communications happen directly between both end node devices without any Gateway involved in the communication).
