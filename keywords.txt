@@ -1,0 +1,33 @@
+# Datatypes (KEYWORD1)
+LoRaE5Class  KEYWORD1
+
+# Methods and Functions (KEYWORD2)
+begin                        KEYWORD2
+getVersion                   KEYWORD2
+getId                        KEYWORD2  
+setId                        KEYWORD2
+setKey                       KEYWORD2
+getbitRate                   KEYWORD2
+setDataRate                  KEYWORD2
+setAdaptiveDataRate          KEYWORD2
+setPort                      KEYWORD2
+setChannel                   KEYWORD2
+setOTAAJoin                  KEYWORD2
+setConfirmedMessageRetryTime KEYWORD2
+setReceiveWindowFirst        KEYWORD2
+setReceiveWindowSecond       KEYWORD2
+setReceiveWindowDelay        KEYWORD2
+transferPacket               KEYWORD2
+transferPacketWithConfirmed  KEYWORD2
+transferProprietaryPacket    KEYWORD2
+receivePacket                KEYWORD2
+setClassType                 KEYWORD2
+setDeviceMode                KEYWORD2
+setDeviceLowPower            KEYWORD2
+setDeviceWakeUp              KEYWORD2
+setDeviceReset               KEYWORD2
+setDeviceDefault             KEYWORD2
+# Constants (LITERAL1)
+COMMAND_PRINT_TO_USER      LITERAL1
+COMMAND_PRINT_TIME_MEASURE LITERAL1
+CUSTOM_LORA_SERIAL         LITERAL1

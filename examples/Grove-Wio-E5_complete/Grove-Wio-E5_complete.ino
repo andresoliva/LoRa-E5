@@ -7,12 +7,12 @@
 #include <Arduino.h>
 #include <stdarg.h> //for using 
 //--------------------------
-#include "LoRaE5.h"   //main LoRa lib
+#include "LoRa-E5.h"   //main LoRa lib
 //---------------------
 /**USER OPTIONS/
 #define PRINT_TO_USER                   /*To allow the printing of characters using UART*/
-//#define PRINT_TO_USER_TIME_difference /*To allow the printing of time difference message*/
-//#define LORA_DEBUG_AND_PRINT          /*Enables the debug mode of the device and allow serial printing*/
+#define PRINT_TO_USER_TIME_DIFFERENCE /*To allow the printing of time difference message*/
+#define LORA_DEBUG_AND_PRINT          /*Enables the debug mode of the device and allow serial printing*/
 /*To set a custom DEVUI if needed for facilitate testing*/
 #define LoRa_DEVEUI_CUSTOM "2CF7F1C0440004A2" //Custom key for this App. You can generate one at https://www.thethingsnetwork.org/docs/devices/registration/
 /*******************************************************************************************************/
@@ -43,7 +43,7 @@ float LoRa_head_tx_time=0; //stores time in ms to transmit only the header of th
 
 /*******************************************************************/
 /*defines dependensies to avoid a CRASH of the program*/
-#ifdef PRINT_TO_USER_TIME_difference
+#ifdef PRINT_TO_USER_TIME_DIFFERENCE
   #ifndef PRINT_TO_USER
     #define PRINT_TO_USER
   #endif
@@ -54,7 +54,7 @@ float LoRa_head_tx_time=0; //stores time in ms to transmit only the header of th
   #endif
 #endif 
 /*******************************************************************/
-#ifdef PRINT_TO_USER_TIME_difference
+#ifdef PRINT_TO_USER_TIME_DIFFERENCE
 void printTimeReceptiondifference(unsigned int time_tx1,unsigned int time_tx2){
    char_temp[0]='\0';
    sprintf(char_temp, "\r\nEstimated transmission time of messages with %i and %i bytes as payload: %.1f ms, %.1f ms.",PAYLOAD_FIRST_TX,PAYLOAD_SECOND_TX,
@@ -78,7 +78,7 @@ void LoRa_setup(void){
   lora.setClassType((_class_type_t) LoRa_DEVICE_CLASS); /*set device class*/
   lora.setPort(LoRa_PORT_BYTES);/*set the default port for transmiting data*/
   lora.setPower(LoRa_POWER); /*sets the Tx power*/
-  lora.setChannel(LoRa_CHANNEL);/*selects the channel*/
+  //lora.setChannel(LoRa_CHANNEL);/*selects the channel*/
   lora.setAdaptiveDataRate(LoRa_ADR_FLAG);/*Enables adaptative data rate*/  
 }
 /**-----------------------------------------------------
@@ -133,7 +133,7 @@ void loop(void)
   time_tx1=lora.transferPacketWithConfirmed(buffer_binary,PAYLOAD_FIRST_TX,Tx_and_ACK_RX_timeout);
   time_tx2=lora.transferPacketWithConfirmed(buffer_binary,PAYLOAD_SECOND_TX,Tx_and_ACK_RX_timeout);
   /*Print DEMO information to the USER*/
-  #ifdef PRINT_TO_USER_TIME_difference 
+  #ifdef PRINT_TO_USER_TIME_DIFFERENCE 
   printTimeReceptiondifference(time_tx1,time_tx2);
   #endif 
   /*POWER DOWN the LoRa module until next Tx Transmition (Tx) cicle*/
