@@ -1,4 +1,4 @@
-# Grove-Wio-E5_advanced
+# LoRa-E5 Library
 Advanced application of SeedStudio module Grove-Wio-E5 based on chip STM32WLE5JC from STM connected to an Arduino Nano 33 BLE Sense board.
 ## Features:
 This project features a LoRa library in order to perform a complete configuration of the Grove-Wio-E5 according to the user needs.
