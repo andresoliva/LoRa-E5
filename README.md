@@ -119,6 +119,11 @@ AT+ADR=OFF
 --------End of Commands responses
 Total Command Time + Time to get ACK response: 18 ms.
 ```
+#### Get Device DevEUI
+```html
+Current DevEui:
++ID: DevEui, 2C:F7:F1:C0:44:00:04:A1
+```
 #### Join failed
 ```html
 --------Command sent:
@@ -142,15 +147,7 @@ AT+JOIN
 --------End of Commands responses
 Total Command Time + Time to get ACK response: 6585 ms.
 ```
-#### Change device address
-```html
---------Command sent:
-AT+KEY= APPKEY,"2B7E151628AED2A609CF4F3CABF71588"
---------Command responses:
-+KEY: APPKEY 2B7E151628AED2A609CF4F3CABF71588
---------End of Commands responses
-Total Command Time + Time to get ACK response: 112 ms.
-```
+
 #### Send String packet and waits for ACK
 ```html
 Sending 44 characters to a LoRa Gateway and waits for ACK
