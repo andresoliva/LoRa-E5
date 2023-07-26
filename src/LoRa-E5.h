@@ -1,5 +1,5 @@
 /*
-  LoRaWAN.cpp for M5Stack (fork from https://github.com/toddkrein/OTAA-LoRaWAN-Seeed)
+  LoRa-E5 (fork from https://github.com/idreamsi/LoRaE5)
 
   2013 Copyright (c) Seeed Technology Inc.  All right reserved.
   2017 Copyright (c) Todd Krein. All rights reserved.
@@ -24,8 +24,8 @@
   THE SOFTWARE.1  USA
 */
 
-#ifndef _LORAE5_H_
-#define _LORAE5_H_
+#ifndef _LORA-E5_H_
+#define _LORA-E5_H_
 /*COMMAND LIST AND EXAMPLES*/
 //https://files.seeedstudio.com/products/317990687/res/LoRa-E5%20AT%20Command%20Specification_V1.0%20.pdf
 /*--------------PRINT TIME --------------------------**/
@@ -40,12 +40,6 @@ What you get instead is the transmission time + the time to get ACK from the gat
 is included, if you subtract the times of two transmissions with different payloads, it will be the subtraction
 of the transmission times. In this way, you can compare the times changes due to the payload size and know what to spect*/
 #define COMMAND_PRINT_TIME_MEASURE
-/****SERIAL SELECTOR****/
-/*If you want to use other pins as serial interfaces in boards like Arduino Nano BLE33 which does not support the
-"SerialLoRa.begin(9600, SERIAL_8N1, rx, tx)" function call, enable this: */
-//#define CUSTOM_LORA_SERIAL
-#define CUSTOM_LORA_SERIAL_TX_PIN A4 //example for using other pins as Tx    
-#define CUSTOM_LORA_SERIAL_RX_PIN A5 //examples for using other pins as Rx
 
 /*defines dependensies to avoid a CRASH of the program*/
 #ifdef COMMAND_PRINT_TIME_MEASURE
@@ -59,13 +53,11 @@ of the transmission times. In this way, you can compare the times changes due to
  #define SerialUSB  Serial
 #endif 
 /*If you are not using Custom Serial, make this define */
-#ifndef CUSTOM_LORA_SERIAL
   #if defined(ESP32)
-    #define SerialLoRa Serial2    //M5Stack ESP32 Camera Module Development Board
+    #define SerialLoRa_native Serial2    //M5Stack ESP32 Camera Module Development Board
   #else
-    #define SerialLoRa Serial1    //For SAMD Variant and XIAO NRF
+    #define SerialLoRa_native Serial1    //For SAMD Variant and XIAO NRF
   #endif
-#endif
 
 #define DEFAULT_TIMEOUT   3000  //milliseconds to max wait for a command to get a response
 #define DEFAULT_TIMEWAIT  100  //DO NOT CHANGE: milliseconds to wait after issuing command via serial and not getting an specific response
@@ -76,7 +68,10 @@ of the transmission times. In this way, you can compare the times changes due to
 #define BEFFER_LENGTH_MAX 512   //reception buffer size. Commands response can be up to 400 bytes according to data sheet examples
 #define MAC_COMMAND_FLAG "MACCMD:"
 #define kLOCAL_BUFF_MAX  64
-
+enum _deviceID{
+   DevAddr=0,
+   DevEui,
+   AppEui};
 enum _debug_level{
    lora_DEBUG=0,
    lora_INFO,
@@ -92,12 +87,16 @@ enum _physical_type_t {
     EU868,
     US915,
     US915HYBRID,
+    US915OLD,
     AU915,
     AS923,
     CN470,
+    CN779,
     KR920,
     CN470PREQUEL,
     STE920,
+    IN865,
+    RU864,
     UNDEF
 };
 enum _device_mode_t { LWABP = 0, LWOTAA, TEST };
@@ -108,7 +107,7 @@ enum _window_delay_t {
     JOIN_ACCEPT_DELAY1,
     JOIN_ACCEPT_DELAY2
 };
-enum _band_width_t { BW125 = 125, BW250 = 250, BW500 = 500 };
+enum _band_width_t { BW50kbps = 50, BW125 = 125, BW250 = 250, BW500 = 500 };
 enum _spreading_factor_t {
     SF12 = 12,
     SF11 = 11,
@@ -133,7 +132,8 @@ enum _data_rate_t {
     DR12,
     DR13,
     DR14,
-    DR15
+    DR15,
+    DRNONE /*USED FOR KNOWING THAT DATA RATE WAS NOT SET. DO NOT REMOVE*/
 };
 /*****************************************************************
 Type    DataRate    Configuration   BitRate| TxPower Configuration
@@ -206,7 +206,7 @@ class LoRaE5Class {
      *  \return Return null.
      */
      
-	void init(uint8_t rx, uint8_t tx);
+	void init(uint8_t tx, uint8_t rx);
     /**
       * \Allows the user to read the serial buffer
       * 
@@ -245,12 +245,12 @@ class LoRaE5Class {
      *  \brief Read the ID from device
      *
      *  \param [in] *buffer The output data cache
+	 *  \param [in] Type of Id to get (DevAddr, DevEui, AppEui)
      *  \param [in] timeout The over time of read
      *
      *  \return Return null.
      */
-    unsigned int getId(char *buffer,
-               unsigned int timeout = DEFAULT_TIMEOUT);
+    unsigned int getId(char *buffer,_deviceID id, unsigned int timeout=DEFAULT_TIMEWAIT);
 
     /**
      *  \brief Set the ID
@@ -292,7 +292,16 @@ class LoRaE5Class {
      */
     unsigned int setDataRate(_data_rate_t dataRate         = DR5,
                      _physical_type_t physicalType = EU868);
-
+       /**
+     *  \brief Set the data rate acoording to the SF, BW and Phys provided
+     *
+     *  \param [in] dataRate The date rate of encoding
+     *  \param [in] physicalType The type of ISM
+     *
+     *  \return Return null.
+     */
+    unsigned int setSpreadFactor(_spreading_factor_t SF, _band_width_t BW,
+                                   _physical_type_t physicalType);
     /**
      *  \brief ON/OFF adaptive data rate mode
      *
@@ -320,7 +329,9 @@ class LoRaE5Class {
      */
     unsigned int setPort(unsigned char port);
 
-    /**
+    /*check what channel is the supported by the system*/
+    unsigned int getChannel(void);
+        /**
      *  \brief Set the channel parameter
      *
      *  \param [in] channel The channel number, range from 0 to 15
@@ -328,7 +339,6 @@ class LoRaE5Class {
      *
      *  \return Return null.
      */
-    unsigned int getChannel(void);
     unsigned int setChannel(unsigned char channel);
     /**
      *  \brief Set the channel parameter
@@ -610,6 +620,19 @@ class LoRaE5Class {
      */
     short receivePacketP2PMode(unsigned char *buffer, short length, short *rssi,
                                unsigned int timeout = DEFAULT_TIMEOUT);
+        /* \brief Returns a very accurate Estimation of packet Transmition time expresed in mseconds
+     *  \param [in]  payload size (data to transmit) in bytes
+     *
+     *  \return Return time in seconds to perform the packet transmition
+     */
+    float getTransmissionTime(unsigned int payload_size);
+        /* \brief Returns a very accurate Estimation of packet Transmition current used to transmit that packet
+     *  \param [in]  payload size (data to transmit) in bytes
+     *
+     *  \return Return time in seconds to perform the packet transmition
+     */
+    float getTransmissionPower(unsigned int payload_size); 
+    
     /**
      *  \brief LoRaWAN raw data
      *
@@ -620,17 +643,22 @@ class LoRaE5Class {
     unsigned int readbitRate(void);
     /*Returns the last adquired txHead_time (time used to transmit LoRa message Header) by the last call of "getbitRate" */
     float        readtxHead_time(void);
+   /*variables declarations*/ 
    private:
     unsigned int bitRate; /*set only by "getbitRate" function. Must be called before reading this variable */
     float txHead_time;   /*set only by "getbitRate" function Must be called before reading this variable*/
+    float freq_band;    /*set only by "setDataRate" or "SetSpreadFactor" function Must be called before reading this variable*/
+    short txPower;    /*set only by "setPower" or "SetSpreadFactor" function Must be called before reading this variable*/
+    
     char recv_buf[BEFFER_LENGTH_MAX];//reception buffer. Commands response can be up to 400 bytes according to data sheet examples
     char cmd[556];//store command to send
     char cmd_resp_ack[64];//store command response ACK to compare with string recieved and thus verify if the command worked. 
     #ifdef COMMAND_PRINT_TIME_MEASURE
     char cmd_time[128];//store commands time response
     #endif
+    UART SerialLoRa;//memory allocate the serial lora inside the class. Used to allow a construction of the class outside
 };
 
-extern LoRaE5Class lora;
+extern LoRaE5Class lora; /*Do not comment or change this!!. Original:extern LoRaE5Class lora;*/
 
 #endif
