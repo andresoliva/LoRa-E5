@@ -1,16 +1,21 @@
 # LoRa-E5 Library
 Advanced application of SeedStudio module Grove-Wio-E5 based on chip STM32WLE5JC from STM connected to an Arduino Nano 33 BLE Sense board.
+
+<img src="./pictures/00_arduinoimport.png" width=50% align="right"> 
+
 ### Easy install and start
+
 * Download this repository
 * Open your Arduino IDE. Go to Sketch-> Include Library -> add.zip library... .Then select your LoRa-E5-main.zip file in your 
 * Go to File-> Examples. Scroll down until you find "Examples for Custom libraries". Below you should find "LoRa_E5". Select Grove-Wio-E5_basic to start.
 ## Features:
 This project features a LoRa library in order to perform a complete configuration of the Grove-Wio-E5 according to the user needs.
-This LoRa library is a modified version of the Ramin Sangesari (https://github.com/idreamsi/LoRaE5) with some rework in order to optimize the performance and add some useful functionalities. Is important to know that Ramin Sangesari's work supports P2P communication between LoRa node devices (this means that communications happen directly between both end node devices without any Gateway involved in the communication).
+This LoRa library is a modified version of the [Ramin Sangesari work](https://github.com/idreamsi/LoRaE5) with some modification in order to allow the library to detect,  optimize the performance and add some useful functionalities like software serial compatibility with boards like Arduino Nano 33 BLE Sense. Is important to know that Ramin Sangesari's work (and therefore, this library) supports P2P communication between LoRa node devices, which means that communications happen directly between both end node devices without any Gateway involved in the communication.
 ### Key features added:
 * Allows to make the use of SoftwareSerial (or Software UART) on boards like Arduino Nano 33BLE by using macros. This is useful if you are using a Grove shield that uses your main serial and you need to use other pins of your board as a Serial interface to communicate with the Grove-Wio-E5 module.
 * Allows to display commands sent, the responses from the Grove-Wio-E5 and enable the print them. Also allows the device to measure the time it took to both send the command and receive a response from Grove-Wio-E5 (and gateway ACK if there is a need for that)
 * You can enable or disable the printing of the command messages. This means that you can run the code with your debugging serial terminal disabled
+* Supports the setup of Spread Factor and Bandwidth (if supported by your chosen ).
 * Allows the use of the different debug modes (DEBUG/INFO/WARN/ERROR/FATAL/PANIC/QUIET).
 * Allows to estimate the time that is going to take to send a message based on your selected DR and Frequency Band (like EU868).
 * Added examples of how to use the low power mode of the device and added a wakeUp function.
@@ -114,6 +119,11 @@ AT+ADR=OFF
 --------End of Commands responses
 Total Command Time + Time to get ACK response: 18 ms.
 ```
+#### Get Device DevEUI
+```html
+Current DevEui:
++ID: DevEui, 2C:F7:F1:C0:44:00:04:A1
+```
 #### Join failed
 ```html
 --------Command sent:
@@ -137,15 +147,7 @@ AT+JOIN
 --------End of Commands responses
 Total Command Time + Time to get ACK response: 6585 ms.
 ```
-#### Change device address
-```html
---------Command sent:
-AT+KEY= APPKEY,"2B7E151628AED2A609CF4F3CABF71588"
---------Command responses:
-+KEY: APPKEY 2B7E151628AED2A609CF4F3CABF71588
---------End of Commands responses
-Total Command Time + Time to get ACK response: 112 ms.
-```
+
 #### Send String packet and waits for ACK
 ```html
 Sending 44 characters to a LoRa Gateway and waits for ACK
