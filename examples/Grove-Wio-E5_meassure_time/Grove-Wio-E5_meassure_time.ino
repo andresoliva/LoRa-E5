@@ -9,10 +9,9 @@
 //--------------------------
 #include "LoRa-E5.h"   //main LoRa lib
 //---------------------
-/**USER OPTIONS/
+/*USER OPTIONS*/
 #define PRINT_TO_USER                   /*To allow the printing of characters using UART*/
-//#define PRINT_TO_USER_TIME_DIFFERENCE /*To allow the printing of time difference message*/
-//#define LORA_DEBUG_AND_PRINT          /*Enables the debug mode of the device and allow serial printing*/
+#define PRINT_TO_USER_TIME_DIFFERENCE /*To allow the printing of time difference message*/
 /*******************************************************************************************************/
 /************************LORA SET UP*******************************************************************/
 /*LoRa radio Init Parameters. Info:  https://www.thethingsnetwork.org/docs/lorawan/architecture/ */
@@ -22,7 +21,7 @@
 #define LoRa_DEVICE_CLASS        CLASS_A /*CLASS_A for power restriction/low power nodes. Class C for other device applications */
 #define LoRa_PORT                8       /*node Port for binary values to send, allowing the app to know it is recieving bytes*/
 #define LoRa_POWER               14      /*Node Tx (Transmition) power*/
-#define LoRa_CHANNEL             2       /*Node selected Tx channel. Default is 0, we use 2 to show only to show how to set up*/
+#define LoRa_CHANNEL             0       /*Node selected Tx channel. Default is 0, we use 2 to show only to show how to set up*/
 #define LoRa_ADR_FLAG            false   /*ADR(Adaptative Dara Rate) status flag (True or False). Use False if your Node is moving*/
 /*Time to wait for transmiting a packet again*/
 #define Tx_delay_s               9.5     /*delay between transmitions expressed in seconds*/
@@ -54,11 +53,11 @@ float LoRa_head_tx_time=0; //stores time in ms to transmit only the header of th
 void printTimeReceptiondifference(unsigned int time_tx1,unsigned int time_tx2){
    char_temp[0]='\0';
    sprintf(char_temp, "\r\nEstimated transmission time of messages with %i and %i bytes as payload: %.1f ms, %.1f ms.",PAYLOAD_FIRST_TX,PAYLOAD_SECOND_TX,
-   LoRa_head_tx_time+(float)(PAYLOAD_FIRST_TX)*8*1000/LoRa_bps,  LoRa_head_tx_time+(float)(PAYLOAD_SECOND_TX)*8*1000/LoRa_bps);
+   lora.getTransmissionTime(PAYLOAD_FIRST_TX),  lora.getTransmissionTime(PAYLOAD_SECOND_TX));
    Serial.print(char_temp);//to print the obtained characters
    char_temp[0]='\0';
    sprintf(char_temp, "\r\nCalculated time difference between transmitting %i and %i bytes as payload: %.1f ms.",PAYLOAD_FIRST_TX,PAYLOAD_SECOND_TX,
-   ((float)(PAYLOAD_SECOND_TX-PAYLOAD_FIRST_TX)*8)*1000/LoRa_bps);
+    lora.getTransmissionTime(PAYLOAD_SECOND_TX) -lora.getTransmissionTime(PAYLOAD_FIRST_TX));
    Serial.print(char_temp);//to print the obtained characters
    char_temp[0]='\0';
    sprintf(char_temp, "\r\nMeasured difference between transmitting with %i and %i bytes as payload: %.1f ms.",PAYLOAD_FIRST_TX,PAYLOAD_SECOND_TX,
@@ -74,7 +73,7 @@ void LoRa_setup(void){
   lora.setClassType((_class_type_t) LoRa_DEVICE_CLASS); /*set device class*/
   lora.setPort(LoRa_PORT);/*set the default port for transmiting data*/
   lora.setPower(LoRa_POWER); /*sets the Tx power*/
-  //lora.setChannel(LoRa_CHANNEL);/*selects the channel*/
+  lora.setChannel(LoRa_CHANNEL);/*selects the channel*/
   lora.setAdaptiveDataRate(LoRa_ADR_FLAG);/*Enables adaptative data rate*/  
 }
 /**-----------------------------------------------------
@@ -94,14 +93,15 @@ void setup(void){
   /*set up device. You must set up all your parameters BEFORE Joining.
    If you make any change (outside channel or port setup), you should join again the network for proper working*/
   LoRa_setup();
+  /*Now shows you the device actual DevEUI and AppEUI got at the time you call the function */
+  #ifdef PRINT_TO_USER 
+  Serial.print("\r\nCurrent DevEui: ");/*to print the obtained characters*/
+  Serial.print(char_temp);/*to print the obtained characters*/
+  #endif
   /*Enters in a while Loop until the join process is completed*/ 
   while(lora.setOTAAJoin(JOIN, 10000)==0);//will attempt to join network until the ends of time. https://www.thethingsnetwork.org/docs/lorawan/message-types/
   /*Get the bit Rate after join (because if Adaptative Data Rate is enable, DR could be changed after join )*/
   lora.getbitRate(&LoRa_bps,&LoRa_head_tx_time);
-  /*Now shows you the device actual DevEUI and AppEUI got at the time you call the function */
-  #ifdef PRINT_TO_USER 
-  Serial.print(char_temp);/*to print the obtained characters*/
-  #endif
    /*POWER DOWN the LoRa module until next Tx (Transmition) cicle*/
   lora.setDeviceLowPower();
 }

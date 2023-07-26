@@ -7,14 +7,14 @@
 #include <Arduino.h>
 #include <stdarg.h> //for using 
 //--------------------------
-#include "LoRa-E5.h"   //main LoRa lib
+#include <LoRa-E5.h>   //main LoRa lib
 //---------------------
-/**USER OPTIONS/
+/**USER OPTIONS*/
 #define PRINT_TO_USER                   /*To allow the printing of characters using UART*/
 #define PRINT_TO_USER_TIME_DIFFERENCE /*To allow the printing of time difference message*/
 #define LORA_DEBUG_AND_PRINT          /*Enables the debug mode of the device and allow serial printing*/
 /*To set a custom DEVUI if needed for facilitate testing*/
-#define LoRa_DEVEUI_CUSTOM "2CF7F1C0440004A2" //Custom key for this App. You can generate one at https://www.thethingsnetwork.org/docs/devices/registration/
+//commented for this example#define LoRa_DEVEUI_CUSTOM "2CF7F1C0440004A1" //Custom DevEUI for this example. You can generate one at https://www.thethingsnetwork.org/docs/devices/registration/
 /*******************************************************************************************************/
 /************************LORA SET UP*******************************************************************/
 /*LoRa radio Init Parameters. Info:  https://www.thethingsnetwork.org/docs/lorawan/architecture/ */
@@ -25,8 +25,11 @@
 #define LoRa_PORT_BYTES          8       /*node Port for binary values to send, allowing the app to know it is recieving bytes*/
 #define LoRa_PORT_STRING         7       /*Node Port for string messages to send, allowing the app to know it is recieving characters/text */
 #define LoRa_POWER               14      /*Node Tx (Transmition) power*/
-#define LoRa_CHANNEL             2       /*Node selected Tx channel. Default is 0, we use 2 to show only to show how to set up*/
+#define LoRa_CHANNEL             0       /*Node selected Tx channel. Default is 0, we use 2 to show only to show how to set up*/
 #define LoRa_ADR_FLAG            false   /*ADR(Adaptative Dara Rate) status flag (True or False). Use False if your Node is moving*/
+/*FOR SETTING DATA RATE USING THE OTHER MODE*/
+#define LoRa_SF                  SF9     /*DR5=5.2kbps //data rate. see at https://www.thethingsnetwork.org/docs/lorawan/regional-parameters/    */
+#define LoRa_BW                  BW125    /*DR5=5.2kbps //data rate. see at https://www.thethingsnetwork.org/docs/lorawan/regional-parameters/    */
 /*Time to wait for transmiting a packet again*/
 #define Tx_delay_s               9.5     /*delay between transmitions expressed in seconds*/
 /*Packet information*/
@@ -58,11 +61,11 @@ float LoRa_head_tx_time=0; //stores time in ms to transmit only the header of th
 void printTimeReceptiondifference(unsigned int time_tx1,unsigned int time_tx2){
    char_temp[0]='\0';
    sprintf(char_temp, "\r\nEstimated transmission time of messages with %i and %i bytes as payload: %.1f ms, %.1f ms.",PAYLOAD_FIRST_TX,PAYLOAD_SECOND_TX,
-   LoRa_head_tx_time+(float)(PAYLOAD_FIRST_TX)*8*1000/LoRa_bps,  LoRa_head_tx_time+(float)(PAYLOAD_SECOND_TX)*8*1000/LoRa_bps);
+   lora.getTransmissionTime(PAYLOAD_FIRST_TX),  lora.getTransmissionTime(PAYLOAD_SECOND_TX));
    Serial.print(char_temp);//to print the obtained characters
    char_temp[0]='\0';
    sprintf(char_temp, "\r\nCalculated time difference between transmitting %i and %i bytes as payload: %.1f ms.",PAYLOAD_FIRST_TX,PAYLOAD_SECOND_TX,
-   ((float)(PAYLOAD_SECOND_TX-PAYLOAD_FIRST_TX)*8)*1000/LoRa_bps);
+    lora.getTransmissionTime(PAYLOAD_SECOND_TX) -lora.getTransmissionTime(PAYLOAD_FIRST_TX));
    Serial.print(char_temp);//to print the obtained characters
    char_temp[0]='\0';
    sprintf(char_temp, "\r\nMeasured difference between transmitting with %i and %i bytes as payload: %.1f ms.",PAYLOAD_FIRST_TX,PAYLOAD_SECOND_TX,
@@ -74,11 +77,12 @@ void printTimeReceptiondifference(unsigned int time_tx1,unsigned int time_tx2){
 void LoRa_setup(void){
   lora.setDeviceMode(LWOTAA);/*LWOTAA or LWABP. We use LWOTAA in this example*/
   lora.setDataRate((_data_rate_t)LoRa_DR, (_physical_type_t)LoRa_FREQ_standard);
+  lora.setSpreadFactor(LoRa_SF,LoRa_BW ,(_physical_type_t)LoRa_FREQ_standard);
   lora.setKey(NULL, NULL, LoRa_APPKEY); /*Only App key is seeted when using OOTA*/
   lora.setClassType((_class_type_t) LoRa_DEVICE_CLASS); /*set device class*/
   lora.setPort(LoRa_PORT_BYTES);/*set the default port for transmiting data*/
   lora.setPower(LoRa_POWER); /*sets the Tx power*/
-  //lora.setChannel(LoRa_CHANNEL);/*selects the channel*/
+  lora.setChannel(LoRa_CHANNEL);/*selects the channel*/
   lora.setAdaptiveDataRate(LoRa_ADR_FLAG);/*Enables adaptative data rate*/  
 }
 /**-----------------------------------------------------
@@ -88,32 +92,32 @@ void setup(void){
   Serial.begin(115200);/*Init Print Serial Port*/
   #endif
   /*Init the LoRa class after initing the serial print port */
-  lora.init();/* call lora.init(Tx_pin,Rx_pin) if your board support Software Serial https://docs.arduino.cc/learn/built-in-libraries/software-serial
+  lora.init(D0,D1);/* call lora.init(Tx_pin,Rx_pin) if your board support Software Serial https://docs.arduino.cc/learn/built-in-libraries/software-serial
   /*Wake Up the LoRa module*/
   lora.setDeviceWakeUp();/*if the module is not in sleep state, this command does nothing*/
-  /*Set Device into DEFAULT mode, to reset any previous configuration that has been made*/
-  lora.setDeviceDefault();
   /*Set de device ID to a custom. Only used to make testing easy*/
   #ifdef LoRa_DEVEUI_CUSTOM
   lora.setId(NULL, LoRa_DEVEUI_CUSTOM, NULL);//WARNING: If you run this command, you will change the defaultd value that the fabricator has asigned to the module until a command to send a setDeviceDefault command..
   #endif
   /*First get device EUI for later printing*/
-  lora.getId(char_temp,100); /*100 ms is more than enough to get a response from the module*/
-  /*set up device. You must set up all your parameters BEFORE Joining.
-   If you make any change (outside channel or port setup), you should join again the network for proper working*/
-  LoRa_setup();
-  /*Enters in a while Loop until the join process is completed*/ 
-  while(lora.setOTAAJoin(JOIN, 10000)==0);//will attempt to join network until the ends of time. https://www.thethingsnetwork.org/docs/lorawan/message-types/
-  /*Get the bit Rate after join (because if Adaptative Data Rate is enable, DR could be changed after join )*/
-  lora.getbitRate(&LoRa_bps,&LoRa_head_tx_time);
+  lora.getId(char_temp,DevEui); 
   /*Debug mode will give you additional info to know what is happening*/
   #ifdef LORA_DEBUG_AND_PRINT
   lora.Debug(lora_DEBUG);
   #endif
+  /*set up device. You must set up all your parameters BEFORE Joining.
+   If you make any change (outside channel or port setup), you should join again the network for proper working*/
+  LoRa_setup();
   /*Now shows you the device actual DevEUI and AppEUI got at the time you call the function */
   #ifdef PRINT_TO_USER 
+  Serial.print("\r\nCurrent DevEui: ");/*to print the obtained characters*/
   Serial.print(char_temp);/*to print the obtained characters*/
   #endif
+  /*Enters in a while Loop until the join process is completed*/ 
+  while(lora.setOTAAJoin(JOIN, 10000)==0);//will attempt to join network until the ends of time. https://www.thethingsnetwork.org/docs/lorawan/message-types/
+  /*Get the bit Rate after join (because if Adaptative Data Rate is enable, DR could be changed after join )*/
+  lora.getbitRate(&LoRa_bps,&LoRa_head_tx_time);
+  /*Now shows you the device actual DevEUI and AppEUI got at the time you call the function */
    /*POWER DOWN the LoRa module until next Tx (Transmition) cicle*/
   lora.setDeviceLowPower();
 }

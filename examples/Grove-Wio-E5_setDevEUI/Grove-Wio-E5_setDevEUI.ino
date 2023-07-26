@@ -1,6 +1,9 @@
-/*Example showing how to set up the device in OTA mode, join a LoRaWAN network and send strings or messages*/
-/*Working with Arduino 1.8.14 IDE and forward*/
-/*Created  by: Andres Oliva Trevisan*/
+//This a custom version of the Seed example for their Grove LoRa_E5 sensor
+//That works with Seeeduino XIAO, Seeeduino XIAO expantion board and DHT11 Temperature and  Humidity Sensor
+//But adaptated for the Arduino Nano 33 BLE Sense connected to a Grove LoRa_E5 sensor
+//Original code; https://wiki.seeedstudio.com/Grove_LoRa_E5_New_Version/#software-code
+//Working with Arduino 1.8.14 IDE and forward
+//Modified by: Andres Oliva Trevisan
 #include <Arduino.h>
 #include <stdarg.h> //for using 
 //--------------------------
@@ -8,6 +11,8 @@
 //---------------------
 /**USER OPTIONS*/
 #define PRINT_TO_USER                   /*To allow the printing of characters using UART*/
+/*To set a custom DEVUI if needed for facilitate testing*/
+#define LoRa_DEVEUI_CUSTOM "2CF7F1C0440004A1" //Custom key for this App. You can generate one at https://www.thethingsnetwork.org/docs/devices/registration/
 /*******************************************************************************************************/
 /************************LORA SET UP*******************************************************************/
 /*LoRa radio Init Parameters. Info:  https://www.thethingsnetwork.org/docs/lorawan/architecture/ */
@@ -61,15 +66,19 @@ void setup(void){
   Serial.begin(115200);/*Init Print Serial Port*/
   #endif
   /*Init the LoRa class after initing the serial print port */
-  lora.init();/* call lora.init(Tx_pin,Rx_pin)|[Example: lora.init(D2,D3)] if you want to use SoftwareSerial)
+  lora.init();/* call lora.init(Tx_pin,Rx_pin) if your board support Software Serial https://docs.arduino.cc/learn/built-in-libraries/software-serial
   /*Wake Up the LoRa module*/
   lora.setDeviceWakeUp();/*if the module is not in sleep state, this command does nothing*/
+  /*Set de device ID to a custom. Only used to make testing easy*/
+  #ifdef LoRa_DEVEUI_CUSTOM
+  lora.setId(NULL, LoRa_DEVEUI_CUSTOM, NULL);//WARNING: If you run this command, you will change the defaultd value that the fabricator has asigned to the module until a command to send a setDeviceDefault command..
+  #endif
   /*First get device EUI for later printing*/
-  lora.getId(char_temp,DevEui); /*100 ms is more than enough to get a response from the module*/
+  lora.getId(char_temp,DevEui); 
   /*set up device. You must set up all your parameters BEFORE Joining.
    If you make any change (outside channel or port setup), you should join again the network for proper working*/
   LoRa_setup();
-    /*Now shows you the device actual DevEUI and AppEUI got at the time you call the function */
+  /*Now shows you the device actual DevEUI and AppEUI got at the time you call the function */
   #ifdef PRINT_TO_USER 
   Serial.print("\r\nCurrent DevEui: ");/*to print the obtained characters*/
   Serial.print(char_temp);/*to print the obtained characters*/
@@ -79,6 +88,7 @@ void setup(void){
    /*POWER DOWN the LoRa module until next Tx (Transmition) cicle*/
   lora.setDeviceLowPower();
 }
+/*packet transfer example*/
 void loop(void)
 {
   /*Wake Up the LoRa module*/
@@ -87,6 +97,8 @@ void loop(void)
   lora.setPort(LoRa_PORT_STRING);/*set port configured in reception Gateway for expecting Strings*/
   lora.transferPacketWithConfirmed(buffer_char,Tx_and_ACK_RX_timeout);
   /*--------sending bytes message*/
+  /*We send the same packet but with PAYLOAD_FIRST_TX and PAYLOAD_SECOND_TX bytes of payload using LoRa_FREQ_standard And
+  Check https://avbentem.github.io/airtime-calculator/ttn/eu868/10 for knowing more how this stimations are made */
   lora.setPort(LoRa_PORT_BYTES);/*set port configured in reception Gateway for expecting bytes*/
   lora.transferPacketWithConfirmed(buffer_binary,PAYLOAD_FIRST_TX,Tx_and_ACK_RX_timeout);
   /*POWER DOWN the LoRa module until next Tx Transmition (Tx) cicle*/

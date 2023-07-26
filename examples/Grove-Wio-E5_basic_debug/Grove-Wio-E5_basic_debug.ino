@@ -1,16 +1,14 @@
-//This a custom version of the Seed example for their Grove LoRa_E5 sensor
-//That works with Seeeduino XIAO, Seeeduino XIAO expantion board and DHT11 Temperature and  Humidity Sensor
-//But adaptated for the Arduino Nano 33 BLE Sense connected to a Grove LoRa_E5 sensor
-//Original code; https://wiki.seeedstudio.com/Grove_LoRa_E5_New_Version/#software-code
-//Working with Arduino 1.8.14 IDE and forward
-//Modified by: Andres Oliva Trevisan
+/*Example showing how to enable the debug mode*/
+/*Working with Arduino 1.8.14 IDE and forward*/
+/*Created  by: Andres Oliva Trevisan*/
 #include <Arduino.h>
 #include <stdarg.h> //for using 
 //--------------------------
 #include "LoRa-E5.h"   //main LoRa lib
 //---------------------
-/**USER OPTIONS/
-#define PRINT_TO_USER                   /*To allow the printing of characters using UART*/
+/**USER OPTIONS*/
+#define PRINT_TO_USER                  /*To allow the printing of characters using UART*/
+#define LORA_DEBUG_AND_PRINT          /*Enables the debug mode of the device and allow serial printing*/
 /*******************************************************************************************************/
 /************************LORA SET UP*******************************************************************/
 /*LoRa radio Init Parameters. Info:  https://www.thethingsnetwork.org/docs/lorawan/architecture/ */
@@ -21,7 +19,7 @@
 #define LoRa_PORT_BYTES          8       /*node Port for binary values to send, allowing the app to know it is recieving bytes*/
 #define LoRa_PORT_STRING         7       /*Node Port for string messages to send, allowing the app to know it is recieving characters/text */
 #define LoRa_POWER               14      /*Node Tx (Transmition) power*/
-#define LoRa_CHANNEL             2       /*Node selected Tx channel. Default is 0, we use 2 to show only to show how to set up*/
+#define LoRa_CHANNEL             0       /*Node selected Tx channel. Default is 0, we use 2 to show only to show how to set up*/
 #define LoRa_ADR_FLAG            false   /*ADR(Adaptative Dara Rate) status flag (True or False). Use False if your Node is moving*/
 /*Time to wait for transmiting a packet again*/
 #define Tx_delay_s               9.5     /*delay between transmitions expressed in seconds*/
@@ -54,7 +52,7 @@ void LoRa_setup(void){
   lora.setClassType((_class_type_t) LoRa_DEVICE_CLASS); /*set device class*/
   lora.setPort(LoRa_PORT_BYTES);/*set the default port for transmiting data*/
   lora.setPower(LoRa_POWER); /*sets the Tx power*/
-  //lora.setChannel(LoRa_CHANNEL);/*selects the channel*/
+  lora.setChannel(LoRa_CHANNEL);/*selects the channel*/
   lora.setAdaptiveDataRate(LoRa_ADR_FLAG);/*Enables adaptative data rate*/  
 }
 /**-----------------------------------------------------
@@ -67,19 +65,18 @@ void setup(void){
   lora.init();/* call lora.init(Tx_pin,Rx_pin) if your board support Software Serial https://docs.arduino.cc/learn/built-in-libraries/software-serial
   /*Wake Up the LoRa module*/
   lora.setDeviceWakeUp();/*if the module is not in sleep state, this command does nothing*/
-  /*Set Device into DEFAULT mode, to reset any previous configuration that has been made*/
-  lora.setDeviceDefault();
   /*First get device EUI for later printing*/
-  lora.getId(char_temp,100); /*100 ms is more than enough to get a response from the module*/
+  lora.getId(char_temp,DevEui); /*100 ms is more than enough to get a response from the module*/
   /*set up device. You must set up all your parameters BEFORE Joining.
    If you make any change (outside channel or port setup), you should join again the network for proper working*/
   LoRa_setup();
-  /*Enters in a while Loop until the join process is completed*/ 
-  while(lora.setOTAAJoin(JOIN, 10000)==0);//will attempt to join network until the ends of time. https://www.thethingsnetwork.org/docs/lorawan/message-types/
   /*Now shows you the device actual DevEUI and AppEUI got at the time you call the function */
   #ifdef PRINT_TO_USER 
+  Serial.print("\r\nCurrent DevEui: ");/*to print the obtained characters*/
   Serial.print(char_temp);/*to print the obtained characters*/
   #endif
+  /*Enters in a while Loop until the join process is completed*/ 
+  while(lora.setOTAAJoin(JOIN, 10000)==0);//will attempt to join network until the ends of time. https://www.thethingsnetwork.org/docs/lorawan/message-types/
    /*POWER DOWN the LoRa module until next Tx (Transmition) cicle*/
   lora.setDeviceLowPower();
 }
