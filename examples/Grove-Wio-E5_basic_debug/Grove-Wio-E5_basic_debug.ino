@@ -1,6 +1,7 @@
 /*Example showing how to enable the debug mode*/
 /*Working with Arduino 1.8.14 IDE and forward*/
 /*Created  by: Andres Oliva Trevisan*/
+/*Repo: https://github.com/andresoliva/LoRa-E5/ */
 #include <Arduino.h>
 #include <stdarg.h> //for using 
 //--------------------------
@@ -62,7 +63,7 @@ void setup(void){
   Serial.begin(115200);/*Init Print Serial Port*/
   #endif
   /*Init the LoRa class after initing the serial print port */
-  lora.init();/* call lora.init(Tx_pin,Rx_pin) if your board support Software Serial https://docs.arduino.cc/learn/built-in-libraries/software-serial
+  lora.init();/* call lora.init(Arduino_Tx_PIN,Arduino_Rx_PIN) to use software serial. Example: lora.init(D2,D3) */
   /*Wake Up the LoRa module*/
   lora.setDeviceWakeUp();/*if the module is not in sleep state, this command does nothing*/
   /*First get device EUI for later printing*/
@@ -76,7 +77,12 @@ void setup(void){
   Serial.print(char_temp);/*to print the obtained characters*/
   #endif
   /*Enters in a while Loop until the join process is completed*/ 
-  while(lora.setOTAAJoin(JOIN, 10000)==0);//will attempt to join network until the ends of time. https://www.thethingsnetwork.org/docs/lorawan/message-types/
+  while(lora.setOTAAJoin(JOIN, 10000)==0)//will attempt to join network until the ends of time. https://www.thethingsnetwork.org/docs/lorawan/message-types/
+   {#ifdef PRINT_TO_USER 
+  Serial.print("\r\nCurrent DevEui: ");/*to print the obtained characters*/
+  Serial.print(char_temp);/*to print the obtained characters*/
+  #endif
+   }
    /*POWER DOWN the LoRa module until next Tx (Transmition) cicle*/
   lora.setDeviceLowPower();
 }

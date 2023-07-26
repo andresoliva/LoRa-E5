@@ -1,9 +1,7 @@
-//This a custom version of the Seed example for their Grove LoRa_E5 sensor
-//That works with Seeeduino XIAO, Seeeduino XIAO expantion board and DHT11 Temperature and  Humidity Sensor
-//But adaptated for the Arduino Nano 33 BLE Sense connected to a Grove LoRa_E5 sensor
-//Original code; https://wiki.seeedstudio.com/Grove_LoRa_E5_New_Version/#software-code
-//Working with Arduino 1.8.14 IDE and forward
-//Modified by: Andres Oliva Trevisan
+/*Example showing how use the functionalities of this library to stimate the transmition time of messages*/
+/*Working with Arduino 1.8.14 IDE and forward*/
+/*Created  by: Andres Oliva Trevisan*/
+/*Repo: https://github.com/andresoliva/LoRa-E5/ */
 #include <Arduino.h>
 #include <stdarg.h> //for using 
 //--------------------------
@@ -83,8 +81,7 @@ void setup(void){
   Serial.begin(115200);/*Init Print Serial Port*/
   #endif
   /*Init the LoRa class after initing the serial print port */
-  lora.init();/* call lora.init(Tx_pin,Rx_pin) if your board support Software Serial https://docs.arduino.cc/learn/built-in-libraries/software-serial
-  /*Wake Up the LoRa module*/
+  lora.init();/* call lora.init(Arduino_Tx_PIN,Arduino_Rx_PIN) to use software serial. Example: lora.init(D2,D3) */
   lora.setDeviceWakeUp();/*if the module is not in sleep state, this command does nothing*/
   /*Set Device into DEFAULT mode, to reset any previous configuration that has been made*/
   lora.setDeviceDefault();
