@@ -7,21 +7,27 @@ Advanced application of SeedStudio module Grove-Wio-E5 based on chip STM32WLE5JC
 
 * Download this repository
 * Open your Arduino IDE. Go to Sketch-> Include Library -> add.zip library... .Then select your LoRa-E5-main.zip file in your 
-* Go to File-> Examples. Scroll down until you find "Examples for Custom libraries". Below you should find "LoRa_E5". Select Grove-Wio-E5_basic to start.
+* Go to File-> Examples. Scroll down until you find "Examples for Custom Libraries". Below you should find "LoRa_E5". Select Grove-Wio-E5_basic to start.
+
+&nbsp;
+
+&nbsp;
+
+
 ## Features:
-This project features a LoRa library in order to perform a complete configuration of the Grove-Wio-E5 according to the user needs.
+This project features a LoRa library that allows to perform a complete configuration of the [Seed's Grove-Wio-E5](https://wiki.seeedstudio.com/Grove_LoRa_E5_New_Version/) according to the user needs.
 This LoRa library is a modified version of the [Ramin Sangesari work](https://github.com/idreamsi/LoRaE5) with some modification in order to allow the library to detect,  optimize the performance and add some useful functionalities like software serial compatibility with boards like Arduino Nano 33 BLE Sense. Is important to know that Ramin Sangesari's work (and therefore, this library) supports P2P communication between LoRa node devices, which means that communications happen directly between both end node devices without any Gateway involved in the communication.
 ### Key features added:
-* Allows to make the use of SoftwareSerial (or Software UART) on boards like Arduino Nano 33BLE by using macros. This is useful if you are using a Grove shield that uses your main serial and you need to use other pins of your board as a Serial interface to communicate with the Grove-Wio-E5 module.
-* Allows to display commands sent, the responses from the Grove-Wio-E5 and enable the print them. Also allows the device to measure the time it took to both send the command and receive a response from Grove-Wio-E5 (and gateway ACK if there is a need for that)
+* Allows to make the use of SoftwareSerial (or Software UART) on boards like Arduino Nano 33BLE. This is useful if you are using a Grove shield that uses your main serial and you need to use other pins of your board as a Serial interface to communicate with the Grove-Wio-E5 module.
+* Allows to display commands sent, the responses from the Grove-Wio-E5 module and enable the print of them. Also allows the device to measure the time it took to both send the command and receive a response from Grove-Wio-E5 (and gateway ACK if there is a need for that)
 * You can enable or disable the printing of the command messages. This means that you can run the code with your debugging serial terminal disabled.
-* Supports the setup of Spread Factor and Bandwidth (if supported by your chosen ).
+* Supports the setup of Spread Factor and Bandwidth (if supported by your chosen  ).
 * Allows the use of the different debug modes (DEBUG/INFO/WARN/ERROR/FATAL/PANIC/QUIET).
-* Allows to estimate the time that is going to take to send a message based on your selected DR and Frequency Band (like EU868).
+* Allows to estimate the time that is going to take to send a message based on your selected DR (or combination of Spread Factor and BandWidth) and LoRaWAN Frequency band (like EU868).
 * Added examples of how to use the low power mode of the device and added a wakeUp function.
-* Added an example to change the DevEUI of the device in order to make the testing of different codes simpler when interacting with a LoRa Gateway.
+* Added an example to change the DevEUI of the device in order to make the testing of different codes simpler when interacting with a LoRa Gateway.IMPORTANT: When you change the DevEUI, this change will last even if you turn off the device, so be aware of what you are doing.
 ## Hardware Setup:
-For . You can find in this project how to connect your Arduino Nano to  https://github.com/andresoliva/Grove-Wio-E5 . This library also features the use of an .
+For . You can find [in this project](https://github.com/andresoliva/Grove-Wio-E5) how to connect your Arduino Nano to  Grove-Wio-E5. This library also features the use of an .
 ## LoRa library important configuration:
 Here are listed some parts of the project file that allows you to set up this configuration.
 #### LoRa.h Serial port selection
