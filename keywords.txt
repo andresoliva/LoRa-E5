@@ -37,7 +37,10 @@ setDeviceLowPower 		KEYWORD2
 setDeviceWakeUp			KEYWORD2
 setDeviceReset			KEYWORD2
 setDeviceDefault		KEYWORD2
-
+setPower			KEYWORD2
+Debug				KEYWORD2
+getTransmissionTime		KEYWORD2
+getTransmissionTime		KEYWORD2
 #######################################
 # Constants
 #######################################
