@@ -307,5 +307,4 @@ You can also go to packets and
 
 #### Packet Reception verification
 ## To test:
-  * Meassure power consumption in low power mode. Add that Power Consumption estimation of the Library.
   * Re-test P2P communication after library rework.
