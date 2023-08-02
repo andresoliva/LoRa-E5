@@ -4,7 +4,11 @@
 
 LoRaE5Class			KEYWORD1
 lora				KEYWORD1
-
+_txpower_current	KEYWORD1
+_physical_type_t	KEYWORD1
+BR_9600		KEYWORD1
+BR_38400	KEYWORD1
+BR_115200		KEYWORD1
 #######################################
 # Methods and Functions 
 #######################################
@@ -18,6 +22,7 @@ getId				KEYWORD2
 setId				KEYWORD2
 setKey				KEYWORD2
 getbitRate			KEYWORD2
+setFrequencyBand		KEYWORD2
 setDataRate			KEYWORD2
 setAdaptiveDataRate		KEYWORD2
 setPort				KEYWORD2
@@ -32,18 +37,24 @@ transferPacketWithConfirmed	KEYWORD2
 transferProprietaryPacket	KEYWORD2
 receivePacket			KEYWORD2
 setClassType			KEYWORD2
+setDeviceBaudRate		KEYWORD2
 setDeviceMode			KEYWORD2
 setDeviceLowPower 		KEYWORD2
+setDeviceLowPowerAutomode	KEYWORD2
 setDeviceWakeUp			KEYWORD2
 setDeviceReset			KEYWORD2
 setDeviceDefault		KEYWORD2
 setPower			KEYWORD2
 Debug				KEYWORD2
 getTransmissionTime		KEYWORD2
-getTransmissionTime		KEYWORD2
+getTransmissionPower	KEYWORD2
+setSpreadFactor			KEYWORD2
+readbitRate			KEYWORD2
+readtxHead_time		KEYWORD2
 #######################################
 # Constants
 #######################################
 
-COMMAND_PRINT_TO_USER      LITERAL1
-COMMAND_PRINT_TIME_MEASURE LITERAL1
+COMMAND_PRINT_TO_USER		LITERAL1
+COMMAND_PRINT_TIME_MEASURE	LITERAL1
+_class_type_t				LITERAL1

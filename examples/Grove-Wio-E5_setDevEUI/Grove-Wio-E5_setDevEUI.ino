@@ -65,8 +65,6 @@ void setup(void){
   #endif
   /*Init the LoRa class after initing the serial print port */
   lora.init();/* call lora.init(Arduino_Tx_PIN,Arduino_Rx_PIN) to use software serial. Example: lora.init(D2,D3) */
-  /*Wake Up the LoRa module*/
-  lora.setDeviceWakeUp();/*if the module is not in sleep state, this command does nothing*/
   /*Set de device ID to a custom. Only used to make testing easy*/
   #ifdef LoRa_DEVEUI_CUSTOM
   lora.setId(NULL, LoRa_DEVEUI_CUSTOM, NULL);//WARNING: If you run this command, you will change the defaultd value that the fabricator has asigned to the module until a command to send a setDeviceDefault command..

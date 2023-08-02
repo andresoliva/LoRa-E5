@@ -63,15 +63,31 @@ of the transmission times. In this way, you can compare the times changes due to
 #define DEFAULT_TIMEWAIT  100  //DO NOT CHANGE: milliseconds to wait after issuing command via serial and not getting an specific response
 
 #define AT_NO_ACK "NO_ACK"  //For not checking the command response in order to send a command error
-
+/*PARAMETERS FIDEX*/
 //*******************************//
 #define BEFFER_LENGTH_MAX 512   //reception buffer size. Commands response can be up to 400 bytes according to data sheet examples
 #define MAC_COMMAND_FLAG "MACCMD:"
 #define kLOCAL_BUFF_MAX  64
+#define RXWIN1_DELAY  1000  //DO NOT CHANGE: milliseconds to wait after a transmition is being made in order to open RXWIN1 for reception
+#define RXWIN2_DELAY  2000  //DO NOT CHANGE: milliseconds to wait after a transmition is being made in order to open RXWIN1 for reception
+
 enum _deviceID{
    DevAddr=0,
    DevEui,
    AppEui};
+/*All this values listed are the supported by the module*/   
+#define LORA_BAUDRATE_DEFAULT BR_9600  
+
+enum _baudrate_bps_supported{
+      BR_9600=9600, /*9600 default value*/
+	  //BR_14400=14400, //COMMENTED DUE TO NO SUPPORT WITH INIT. SEE LoRaE5Class::init for more info
+	  //BR_19200=19200,//COMMENTED DUE TO NO SUPPORT WITH INIT. SEE LoRaE5Class::init for more info
+	  BR_38400=38400,
+	 // BR_57600=57600,//COMMENTED DUE TO NO SUPPORT WITH INIT. SEE LoRaE5Class::init for more info
+	 // BR_76800=76800,//COMMENTED DUE TO NO SUPPORT WITH INIT. SEE LoRaE5Class::init for more info
+	  BR_115200=115200,
+	 // BR_230400=230400//COMMENTED DUE TO NO SUPPORT WITH INIT. SEE LoRaE5Class::init for more info
+	  };
 enum _debug_level{
    lora_DEBUG=0,
    lora_INFO,
@@ -107,14 +123,21 @@ enum _window_delay_t {
     JOIN_ACCEPT_DELAY1,
     JOIN_ACCEPT_DELAY2
 };
-enum _band_width_t { BW50kbps = 50, BW125 = 125, BW250 = 250, BW500 = 500 };
+enum _band_width_t { 
+    BWX = 0, 
+    BW50kbps = 50, 
+	BW125 = 125, 
+	BW250 = 250, 
+	BW500 = 500 
+};
 enum _spreading_factor_t {
     SF12 = 12,
     SF11 = 11,
     SF10 = 10,
     SF9  = 9,
     SF8  = 8,
-    SF7  = 7
+    SF7  = 7,
+	SFX  = 0
 };
 enum _data_rate_t {
     DR0 = 0,
@@ -184,7 +207,45 @@ CN780   0           SF12/125 kHz    250    | 0       10dBm
         7           FSK:50 kbps     50000  |
         8:15        RFU                    |
 ******************************************************************/
+/* ********************************
+Power consumption data sheet valyes
+  *Only 60uA in sleep mode. To meassure
+  *Ultra-low Power Consumption: as low as 2.1uA sleep current (WOR mode)
+  *datasheet info Active-mode RX: 4.82 mA
+  *Active-mode TX PA=0:      15 mA at 10 dBm and 87 mA at 20 dBm (LoRa ® 125 kHz)
+  *Active-mode TX PA=0:490 : 13 mA at 10 dBm, 21 mA at 14 dBm and 72 mA at 20 dBm
+  *Active-mode TX PA=0:868 :17.5mA at 10 dBm, 26 mA at 14 dBm and 92 mA at 20 dBm
+Power consumption table
+source: https://forum.seeedstudio.com/t/lora-e5-fw-bug-tx-eu868-85ma-too-high-consumption/260126/3
+| LoRaWAN power | PHY tx power, dBm | ST firmware, mA | Patched, mA | Patched==firmware upgrade
+| ------------: | ----------------: | --------------: | ----------: |
+|             0 |                14 |              86 |          60 |
+|             1 |                12 |              77 |          59 |
+|             2 |                10 |              70 |          46 |
+|             3 |                 8 |              63 |          44 |
+|             4 |                 6 |              59 |          42 |
+|             5 |                 4 |              52 |          39 |
+|             6 |                 2 |              46 |          36 |
+|             7 |                 0 |              41 |          32 |
+*/
+/*measures done using the default */
+#define    SLEEPPOWER_mA    0.021 //measured: power consuption when module is feed with 3.3V and is in sleep mode
+#define    RXPOWER_mA       5.65 //measured mA when LoRa-E5 module is working as a receptor
+#define    TXPOWER_00dBm_mA 41.0  //NOT MEASURED. STIMATED  based on table
+#define    TXPOWER_02dBm_mA 41.5 //meassured 41.5 mA at 868 Mhz
+#define    TXPOWER_04dBm_mA 48.1 //meassured 48.1 mA at 868 Mhz
+#define    TXPOWER_06dBm_mA 53.5 //meassured 53.5 mA at 868 Mhz
+#define    TXPOWER_08dBm_mA 60.6 //meassured 60.6 mA at 868 Mhz
+#define    TXPOWER_10dBm_mA 68.3 //meassured 68.3 mA at 868 Mhz
+#define    TXPOWER_12dBm_mA 77.3 //meassured 77.3 mA at 868 Mhz
+#define    TXPOWER_14dBm_mA 86.8 //meassured 86.8 mA at 868 Mhz
+#define    TXPOWER_16dBm_mA 86.8 //Module says that 16 dBm were set up properlty, meassured 86.8 mA at 868 Mhz. Not checked if the effective TX 
 
+
+/****************************************************************************
+ ******************LORA CLASS DEFINITION*************************************
+ ****************************************************************************
+ ****************************************************************************/
 class LoRaE5Class {
    public:
     LoRaE5Class(void);
@@ -282,7 +343,16 @@ class LoRaE5Class {
      */
     unsigned int getbitRate(unsigned int* pbitRate,float* ptxHead_time);
 
-    /**
+      /**
+     *  \brief Set the standard frequencyBand utilized
+     *
+     *  \param [in] physicalType The type of ISM
+     *
+     *  \return Return null.
+     */
+unsigned int setFrequencyBand(_physical_type_t physicalType);
+
+   /**
      *  \brief Set the data rate
      *
      *  \param [in] dataRate The date rate of encoding
@@ -546,12 +616,24 @@ class LoRaE5Class {
      */
     unsigned int setClassType(_class_type_t type);
 
-    /**
+    	/**
+     *  \brief Change the device baud rate
+     *
+     *  \return Return null
+     */
+	unsigned int setDeviceBaudRate(_baudrate_bps_supported baud_rate );
+	/**
      *  \brief Set device into low power mode
      *
      *  \return Return null
      */
-    unsigned int setDeviceLowPower(void);
+    unsigned int setDeviceLowPower(unsigned int time_to_wakeups=0 );
+	    /**
+     *  \brief Set device into low power mode
+     *
+     *  \return Return null
+     */
+    unsigned int setDeviceLowPowerAutomode(bool mode );
     
     /**
      *  \brief Wakes up the device
@@ -627,11 +709,13 @@ class LoRaE5Class {
      */
     float getTransmissionTime(unsigned int payload_size);
         /* \brief Returns a very accurate Estimation of packet Transmition current used to transmit that packet
+		       and 
      *  \param [in]  payload size (data to transmit) in bytes
+	 *  \param [in]  tx_period_s period in seconds in which you will transmit the packet. Default is 1 for hour.
      *
-     *  \return Return time in seconds to perform the packet transmition
+     *  \return Return power expressed in mAh expected for a voltage input of 3.3V.
      */
-    float getTransmissionPower(unsigned int payload_size); 
+    float getTransmissionPower(unsigned int payload_size, float tx_period_s=3600); 
     
     /**
      *  \brief LoRaWAN raw data
@@ -639,17 +723,25 @@ class LoRaE5Class {
      *  \return Return null
      */
     unsigned int Debug(_debug_level value);
+	
     /*Returns the last adquired bitRate by the last call of "getbitRate" */
     unsigned int readbitRate(void);
-    /*Returns the last adquired txHead_time (time used to transmit LoRa message Header) by the last call of "getbitRate" */
+    /*Returns the last adquired txHead_time (time used to transmit LoRa message Header in ms) by the last call of "getbitRate" */
     float        readtxHead_time(void);
    /*variables declarations*/ 
    private:
-    unsigned int bitRate; /*set only by "getbitRate" function. Must be called before reading this variable */
-    float txHead_time;   /*set only by "getbitRate" function Must be called before reading this variable*/
-    float freq_band;    /*set only by "setDataRate" or "SetSpreadFactor" function Must be called before reading this variable*/
-    short txPower;    /*set only by "setPower" or "SetSpreadFactor" function Must be called before reading this variable*/
-    
+    void SF_BW_to_bitrate_txhead_time(_spreading_factor_t SF, _band_width_t BW);/*stimate time to tx based on selected parameters*/
+	bool init_first_call(void);/*Function only to be called by first LoRa Init*/
+    void initSerial(_baudrate_bps_supported baud_rate); /*allows an easy init of the serial port*/
+    uint8_t uart_tx, uart_rx ;   /*Uart Tx and RX pins for communication with LoRa_WIO*/
+    bool lowpower_auto; /*LowPower Autoonmode enable*/
+    bool adaptative_DR; /*Adatpative data rate. is true by default in the module*/
+    unsigned int bitRate; /*[bitsps]set only by "getbitRate" function. Must be called before reading this variable */
+    float txHead_time;   /*[miliseconds]set only by "getbitRate" function Must be called before reading this variable*/
+    float freq_band;    /*[MHz]set only by "setDataRate" or "SetSpreadFactor" function Must be called before reading this variable*/
+    short txPower;    /*[dBm]set only by "setPower" or "SetSpreadFactor" function Must be called before reading this variable*/
+
+	
     char recv_buf[BEFFER_LENGTH_MAX];//reception buffer. Commands response can be up to 400 bytes according to data sheet examples
     char cmd[556];//store command to send
     char cmd_resp_ack[64];//store command response ACK to compare with string recieved and thus verify if the command worked. 

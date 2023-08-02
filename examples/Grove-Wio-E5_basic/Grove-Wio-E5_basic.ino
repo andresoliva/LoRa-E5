@@ -62,10 +62,7 @@ void setup(void){
   Serial.begin(115200);/*Init Print Serial Port*/
   #endif
   /*Init the LoRa class after initing the serial print port */
-  lora.init();/* call lora.init(Arduino_Tx_PIN,Arduino_Rx_PIN) to use software serial. Example: lora.init(D2,D3) */
-  /*Wake Up the LoRa module*/
-  lora.setDeviceWakeUp();/*if the module is not in sleep state, this command does nothing*/
-  /*First get device EUI for later printing*/
+  lora.init();/* call lora.init(Arduino_Tx_PIN,Arduino_Rx_PIN) to use software serial. Example: lora.init(D2,D3) */ /*First get device EUI for later printing*/
   lora.getId(char_temp,DevEui); /*100 ms is more than enough to get a response from the module*/
   /*set up device. You must set up all your parameters BEFORE Joining.
    If you make any change (outside channel or port setup), you should join again the network for proper working*/

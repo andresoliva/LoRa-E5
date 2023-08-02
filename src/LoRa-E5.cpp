@@ -37,29 +37,82 @@ const char *physTypeStr[10] = {"EU434",        "EU868", "US915", "US915HYBRID",
                                "CN470PREQUEL", "STE920"};
 
 LoRaE5Class::LoRaE5Class(void) {
-
+    lowpower_auto=false; /*LowPower Autoonmode enable*/
+    adaptative_DR=true; /*Adatpative data rate. is true by default in the module*/
+	txPower=14;//14 is default set up
+	freq_band=0;
+	uart_tx=0;
+	uart_rx=0;
 }
 /*SERIAL CUSTOM MODE
 link: https://forum.arduino.cc/t/third-serial-on-nano-33-ble-can-be-software/929047/10  */
 
-void LoRaE5Class::init(void) { //For Hardware Serial
-     SerialLoRa.begin(9600);
-     memcpy(&SerialLoRa,&SerialLoRa_native, sizeof(SerialLoRa));
-     SerialLoRa.begin(9600);   /*For software LoRa serial*/   
-}
-void LoRaE5Class::init(uint8_t tx, uint8_t rx) {//for software serial
-    /*if using software serial on your board (define CUSTOM_SERIAL_TX_PIN)*/
-     /*default*/
-      #if defined(ESP32)
-        SerialLoRa.begin(9600, SERIAL_8N1, rx, tx); //M5Stack ESP32 Camera Module Development Board 
+void LoRaE5Class::initSerial(_baudrate_bps_supported baud_rate){
+	/*proceed to init based if Tx and RX were provided during LoRa.init call*/
+	 #ifdef COMMAND_PRINT_TO_USER
+      SerialUSB.print("\r\nSerialLora baud rate set:");  // Serial.print(p_p_cmd, args);
+      SerialUSB.print(baud_rate); /*print the command*/
+	 #endif 
+	if((uart_tx==0)and(uart_rx==0)){
+	 /*Init UART with default pins if were not provided*/	
+	 memcpy(&SerialLoRa,&SerialLoRa_native, sizeof(SerialLoRa));
+     SerialLoRa.begin((unsigned int)baud_rate);   /*For software LoRa serial*/   
+	}
+	else{
+	/*Init UART with the pins provided*/	
+	  #if defined(ESP32)
+        SerialLoRa.begin(baud_rate, SERIAL_8N1, uart_rx, uart_tx); //M5Stack ESP32 Camera Module Development Board 
       #else
         #ifdef PRINT_TO_USER 
         Serial.print("\r\nIMPORTANT: RUNNING serial port used with LoRa communication as a SoftwareSerial");/*to print the obtained characters*/
         #endif
-        UART SerialLoRa_aux(tx,rx);//you have to call the constructor in this way
+        UART SerialLoRa_aux(uart_tx,uart_rx);//you have to call the constructor in this way
         memcpy(&SerialLoRa,&SerialLoRa_aux, sizeof(SerialLoRa));
-        SerialLoRa.begin(9600,SERIAL_8N1);   /*For software LoRa serial*/  
+        SerialLoRa.begin(baud_rate,SERIAL_8N1);   /*For software LoRa serial*/  
       #endif  
+	}
+}
+/*first call of init inside the class*/
+bool LoRaE5Class::init_first_call(void) { //For Hardware Serial
+     unsigned int cmd_time;
+	 bool ret=false;
+	 initSerial(LORA_BAUDRATE_DEFAULT); //9600 is the default baud_rate115200
+	 //test the differents baud rates in order to perform an automatic detection
+      #ifdef PRINT_TO_USER 
+        Serial.print("\r\nTesting connection with the device");/*to print the obtained characters*/
+      #endif
+	 lowpower_auto=true;/*Set here just if automode was disabled in a previous program*/
+	 if(at_send_check_response("AT+\r\n","AT",DEFAULT_TIMEWAIT, NULL)==0){
+	    SerialLoRa.end();
+	    initSerial(BR_38400); 
+	    if(at_send_check_response("AT+\r\n","AT",DEFAULT_TIMEWAIT, NULL)==0){
+		   SerialLoRa.end();
+	       initSerial(BR_115200); 
+		   if(at_send_check_response("AT+\r\n","AT",DEFAULT_TIMEWAIT, NULL)==0){
+		     ;;
+		   }else{ret=true;}
+	     }else{ret=true;}
+	 }else{ret=true;}
+	  #ifdef PRINT_TO_USER 
+	    if(ret==true){Serial.print("\r\n GROOVE WIO-LoRa-E5 Detected");}/*to print the obtained characters*/
+        if(ret==false){Serial.print("\r\nERROR: COULD NOT DETECT GROOVE WIO-LoRa-E5 module");}/*to print the obtained characters*/
+      #endif
+	 /*once the baud rate has been detected, work into that mode*/
+	 setDeviceLowPowerAutomode(false);//first thing to do is to set automode to false to avoid issues with this mode
+     /*Wake Up the LoRa module*/
+     setDeviceWakeUp();/*if the module is not in sleep state, this command does nothing*/
+return ret;
+}
+/*Set up serial port, remove auto low power and wake up the device*/
+void LoRaE5Class::init(void) { //For Hardware Serial
+      if(init_first_call()==false){while(1);};
+}
+/*Set up serial port, remove auto low power and wake up the device*/
+void LoRaE5Class::init(uint8_t tx, uint8_t rx) {//for software serial
+     /*Stores the pints into a class*/
+	  uart_tx=tx;
+	  uart_rx=rx;
+      if(init_first_call()==false){while(1);};
 }
 
 unsigned int LoRaE5Class::readBuffer(char* buffer, unsigned int length, unsigned int timeout_ms){
@@ -102,13 +155,17 @@ unsigned int LoRaE5Class::at_send_check_response(char* p_cmd, char* p_ack, unsig
     strlcpy(recv_buf," ",1);//Manually indicates end of string
     /*clean the serial port before issuing the command*/
     while (SerialLoRa.available() > 0){ ch = SerialLoRa.read();}//clean the read buffer
-    /*Send the comand*/
-    SerialLoRa.print(p_cmd); //sends command to Grove LoRa_E5 module
-    /*---------*/
-    startMillis = millis();// Starts meassuring time after the command was sended
+    startMillis = millis();//DO NOT MOVE FROM HERE Starts meassuring time BEFORE the command was sended. 
+	/*Send special chaarcter for compatibility with LOWPOWER=AUTOMODE*/
+	if (lowpower_auto){SerialLoRa.write(0xff);SerialLoRa.write(0xff);SerialLoRa.write(0xff);SerialLoRa.write(0xff);};
+	/*Send the comand*/
+	if (!(p_cmd == NULL)){ SerialLoRa.print(p_cmd);} //sends command to Grove LoRa_E5 module
+	       /*---------*/
     #ifdef COMMAND_PRINT_TO_USER
-    SerialUSB.print("\r\n--------Command sent:\r\n");  // Serial.print(p_p_cmd, args);
-    SerialUSB.print(p_cmd); /*print the command*/
+    if (!(p_cmd == NULL)){
+      SerialUSB.print("\r\n--------Command sent:\r\n");  // Serial.print(p_p_cmd, args);
+      SerialUSB.print(p_cmd); /*print the command*/
+	  }
     #endif
     /*ensure a valid p_ack (pointer to command string expected response from the module) was provided*/
     if (p_ack == NULL) { 
@@ -210,32 +267,72 @@ use the Application Key (AppKey) to derive the two session keys during the activ
 */
 unsigned int LoRaE5Class::setKey(char *NwkSKey, char *AppSKey, char *AppKey) {
     unsigned int time_cmd=0;
+	cmd[0]='\0';//reset the string position
+	cmd_resp_ack[0]='\0';//reset the string position
     if (NwkSKey) {
-        cmd[0]='\0';//reset the string position
         sprintf(cmd, "AT+KEY=NWKSKEY,\"%s\"\r\n", NwkSKey);
-        time_cmd=+at_send_check_response(cmd,AT_NO_ACK,DEFAULT_TIMEWAIT*2,NULL);
+		sprintf(cmd_resp_ack,"%s", NwkSKey);
+        time_cmd=+at_send_check_response(cmd,cmd_resp_ack,DEFAULT_TIMEWAIT*2,NULL);
     }
 
     if (AppSKey) {
-        cmd[0]='\0';//reset the string position
         sprintf(cmd, "AT+KEY=APPSKEY,\"%s\"\r\n", AppSKey);
-        time_cmd=+at_send_check_response(cmd,AT_NO_ACK,DEFAULT_TIMEWAIT*2,NULL);
+		sprintf(cmd_resp_ack,"%s", AppSKey);
+        time_cmd=+at_send_check_response(cmd,cmd_resp_ack,DEFAULT_TIMEWAIT*2,NULL);
     }
 
     if (AppKey) {
-        cmd[0]='\0';//reset the string position
         sprintf(cmd, "AT+KEY= APPKEY,\"%s\"\r\n", AppKey);
-        time_cmd=+at_send_check_response(cmd,AT_NO_ACK,DEFAULT_TIMEWAIT*2,NULL);
+	    sprintf(cmd_resp_ack,"%s", AppKey);
+        time_cmd=+at_send_check_response(cmd,cmd_resp_ack,DEFAULT_TIMEWAIT*2,NULL);
     }
     return(time_cmd);
 }
+void LoRaE5Class::SF_BW_to_bitrate_txhead_time(_spreading_factor_t SF, _band_width_t BW) {
+	unsigned char scale=4;
+  /*set scale value based on BW*/
+    if(BW==BW500){scale=4;}
+    if(BW==BW250){scale=2;}
+    if(BW==BW125){scale=1;}
+  /*Set value of return based on SF and BW*/
+    if(SF==SF12){//RX win: 0payload+43 ms aprox
+      bitRate=250*scale;
+      txHead_time=1155.1/scale;//RX WINDOW:1190 ms  dif with tx 35
+      }
+    if(SF==SF11){
+      bitRate=440*scale;
+      txHead_time=577.5/scale;//RX WINDOW:616 ms  dif with tx 39
+      }
+    if(SF==SF10){
+      bitRate=980*scale;
+      txHead_time=288.8/scale;//RX WINDOW:329 ms dif with tx 40
+      }
+    if(SF==SF9){
+      bitRate=1760*scale;
+      txHead_time=164.9/scale; //RX WINDOW:200 ms dif with tx 28.6
+      }
+    if(SF==SF8){
+      bitRate=3125*scale;
+      txHead_time=82.4/scale; //RX WINDOW:125 ms dif with tx 42.7
+      }     
+    if(SF==SF7){
+      bitRate=5470*scale;
+      txHead_time=46.3/scale;//RX WINDOW:88 ms dif with tx 41.7
+      }
+    /*especial case: 50 kbps with FSK modulation instead of LoRa*/  
+    if(BW==BW50kbps){
+      bitRate=50000;
+      txHead_time=0;/*We use 0 because I could not find tis value in the web.*/
+      }
+}
 unsigned int LoRaE5Class::getbitRate(unsigned int* pbitRate,float* ptxHead_time) {
     unsigned int time_cmd=0;
+	_band_width_t BW=BWX;
+	_spreading_factor_t SF=SFX;
     cmd[0]='\0';//reset the string position
     cmd_resp_ack[0]='\0';//reset the string position
     char substr[20];//16 is max size, we use 20 just in case.
     char* pstr;
-    unsigned char scale=4;
     /*Send command to get bitRate*/
     sprintf(cmd, "AT+DR\r\n");
     time_cmd=+at_send_check_response(cmd,AT_NO_ACK,DEFAULT_TIMEWAIT,NULL);
@@ -260,70 +357,36 @@ unsigned int LoRaE5Class::getbitRate(unsigned int* pbitRate,float* ptxHead_time)
             }
         }
     /*set scale value based on BW*/
-    if(strstr(substr, "BW500")!= NULL){scale=4;}
-    if(strstr(substr, "BW250")!= NULL){scale=2;}
-    if(strstr(substr, "BW125")!= NULL){scale=1;}
-    /*Set value of return based on SF and BW*/
-    if(strstr(substr,"SF12")!= NULL){
-      bitRate=250*scale;
-      txHead_time=1115.1/scale;
-      }
-    if(strstr(substr,"SF11")!= NULL){
-      bitRate=440*scale;
-      txHead_time=577.5/scale;
-      }
-    if(strstr(substr,"SF10")!= NULL){
-      bitRate=980*scale;
-      txHead_time=288.8/scale;
-      }
-    if(strstr(substr,"SF9")!= NULL){
-      bitRate=1760*scale;
-      txHead_time=164.9/scale;
-      }
-    if(strstr(substr,"SF8")!= NULL){
-      bitRate=3125*scale;
-      txHead_time=82.4/scale;
-      }     
-    if(strstr(substr,"SF7")!= NULL){
-      bitRate=5470*scale;
-      txHead_time=46.3/scale;
-      }
-    /*especial case: 50 kbps with FSK modulation instead of LoRa*/  
-    if(strstr(substr,"50kbps")!= NULL){
-      bitRate=50000;
-      txHead_time=0;/*We use 0 because I could not find tis value in the web.*/
-      }
+    if(strstr(substr, "BW500")!= NULL){BW=BW500;}
+    if(strstr(substr, "BW250")!= NULL){BW=BW250;}
+    if(strstr(substr, "BW125")!= NULL){BW=BW125;}
+	if(strstr(substr,"50kbps")!= NULL){BW=BW50kbps;}
+    /*Set value of SF*/
+    if(strstr(substr,"SF12")!= NULL){SF=SF12;}
+    if(strstr(substr,"SF11")!= NULL){SF=SF12;}
+    if(strstr(substr,"SF10")!= NULL){SF=SF12;}
+    if(strstr(substr,"SF9")!= NULL){SF=SF12;}
+    if(strstr(substr,"SF8")!= NULL){SF=SF12;}
+    if(strstr(substr,"SF7")!= NULL){SF=SF12;}
+	/*after obtaining the SF and BW, set the bitRate and txHead_time clas variables */  
+	SF_BW_to_bitrate_txhead_time(SF,BW);  
     /*if pointers were provided, store the values     */
      if (!(pbitRate==NULL)){*pbitRate=bitRate;}//Stores the value if a pointer was provided
      if (!(ptxHead_time==NULL)){*ptxHead_time=txHead_time;}//Stores the value if a pointer was provided
     /*return the command time*/       
     return time_cmd;
 }
-
-
-unsigned int LoRaE5Class::setDataRate(_data_rate_t dataRate,
-                               _physical_type_t physicalType) {
+unsigned int LoRaE5Class::setFrequencyBand(_physical_type_t physicalType){
     unsigned int time_cmd=0;
-
-    if ((physicalType <= UNINIT) && (physicalType >= UNDEF)) {
-        #ifdef COMMAND_PRINT_TO_USER
-        SerialUSB.print("\r\n!!Unknown datarate\n");
-        #endif
-        return 0;
-    }
-    // set frequency band first
     cmd[0]='\0';//reset the string position
     cmd_resp_ack[0]='\0';//reset the string position
-    sprintf(cmd, "AT+DR= %s\r\n", physTypeStr[physicalType]);
-    sprintf(cmd_resp_ack, "+DR: %s\r\n", physTypeStr[physicalType]);
-    time_cmd=+at_send_check_response(cmd,cmd_resp_ack,DEFAULT_TIMEWAIT,NULL);
-    // then set data rate
-    cmd[0]='\0';//reset the string position
-    cmd_resp_ack[0]='\0';//reset the string position
-    sprintf(cmd, "AT+DR=%d\r\n", dataRate);
-    sprintf(cmd_resp_ack, AT_NO_ACK, dataRate);//use NO_ACK as ack_response due to the variety of messages
-    time_cmd=+at_send_check_response(cmd,cmd_resp_ack,DEFAULT_TIMEWAIT,NULL);
-    if(time_cmd){ /*if command response ok, store the band set value*/
+	if (physicalType>UNINIT){
+       sprintf(cmd, "AT+DR= %s\r\n", physTypeStr[physicalType]);
+       sprintf(cmd_resp_ack, "%s", physTypeStr[physicalType]);
+	   time_cmd=at_send_check_response(cmd,cmd_resp_ack,2*DEFAULT_TIMEWAIT,NULL);
+	 }
+	 /*Stores frequency band if command was ok*/
+	if(time_cmd){ /*if command response ok, store the band set value*/
       if (physicalType==EU434){freq_band=434;}
       if (physicalType==EU868){freq_band=868;}
       if (physicalType==US915 or physicalType==US915HYBRID){freq_band=915;}
@@ -335,11 +398,36 @@ unsigned int LoRaE5Class::setDataRate(_data_rate_t dataRate,
       if (physicalType==KR920){freq_band=920;}
       if (physicalType==STE920){freq_band=920;}     
       }
+
+return(time_cmd);	 
+}
+							   
+
+unsigned int LoRaE5Class::setDataRate(_data_rate_t dataRate,
+                               _physical_type_t physicalType) {
+    unsigned int time_cmd=0;
+
+    if ((dataRate <= UNINIT)) {
+        #ifdef COMMAND_PRINT_TO_USER
+        SerialUSB.print("\r\n!!Unknown datarate\n");
+        #endif
+        return 0;
+    }
+    // set frequency band first if was no set. If you change the frequency band, a rejoin will be requested to send messages in OOTA mode
+	if (freq_band==0){time_cmd=+setFrequencyBand(physicalType); }
+    // then set data rate
+    cmd[0]='\0';//reset the string position
+    sprintf(cmd, "AT+DR=%d\r\n", dataRate);
+    time_cmd=+at_send_check_response(cmd,AT_NO_ACK,DEFAULT_TIMEWAIT,NULL);
+
     return time_cmd;
 }
 unsigned int LoRaE5Class::setSpreadFactor(_spreading_factor_t SF, _band_width_t BW,_physical_type_t physicalType){
 _data_rate_t DR=DRNONE; /*To ensure you are setting a supported DR*/
 unsigned int time_cmd=0;
+     // set frequency band first if was no set. If you change the frequency band, a rejoin will be requested to send messages in OOTA mode
+	if (freq_band==0){time_cmd=+setFrequencyBand(physicalType); }
+	/*now set the spread factor*/
 if ((physicalType==CN470)or(physicalType==KR920)or
     (physicalType==CN470PREQUEL)){
    if (((SF==SF12))and(BW==BW125)){DR=DR0;}
@@ -379,13 +467,15 @@ if ((physicalType==EU868)or(physicalType==CN779)or
     if (((SF==SF7))and(BW==BW125)){DR=DR5;}
     if (((SF==SF8))and(BW==BW500)){DR=DR6;}
    }
-   }  
+}  
 
 if(DR!=DRNONE){
     #ifdef COMMAND_PRINT_TO_USER
     SerialUSB.print("\r\nSetting Data Rate according to Spread factor (SF), BandWidth (BW) and LoRaWAN Standard Band Plan selected");
     #endif 
-    time_cmd=setDataRate(DR,physicalType);} /*A COMMAND WAS SET, SO RETURN THE VALUE*/
+    time_cmd=setDataRate(DR,UNINIT); /*Set only DR.*/
+	SF_BW_to_bitrate_txhead_time(SF,BW); /*update the variables values*/
+   }
 else{
     #ifdef COMMAND_PRINT_TO_USER
     SerialUSB.print("\r\n ERORR: The combination of Spread factor (SF) and BandWidth (BW) is not supported LoRaWAN Standard Band Plan.Therefore, no Data rate was seeted. Example: For EU868 there is ot Data Rate defined for a SF=12 and BW=500K");
@@ -429,7 +519,9 @@ unsigned int LoRaE5Class::setAdaptiveDataRate(bool command) {
         sprintf(cmd_resp_ack, "+ADR: OFF");
         }
     time_cmd=at_send_check_response(cmd,cmd_resp_ack,DEFAULT_TIMEWAIT,NULL);// returns 0 if the command was not ACK by Gateway.
-    return(time_cmd);
+    /*If command was acknowledged, update the adaptative_DR variable */
+	if (time_cmd>0){adaptative_DR=command;}
+	return(time_cmd);
 }
 
 unsigned int LoRaE5Class::getChannel(void) {
@@ -540,7 +632,12 @@ unsigned int LoRaE5Class::transferPacketWithConfirmed(char *buffer,
     #endif
     cmd[0]='\0';//reset the string
     sprintf(cmd,"AT+CMSG=\"%s\"\r\n",buffer);
-    time_ret=at_send_check_response(cmd,"Done",timeout,NULL);
+    time_ret=at_send_check_response(cmd,"Wait ACK",timeout,NULL);
+	/*wait to Open reception Window*/
+	time_ret=+RXWIN1_DELAY;
+	/*turn off module to optimize performance*/
+	delay(RXWIN1_DELAY);/**/
+	time_ret=+at_send_check_response(NULL,"Done",timeout,NULL);
     return time_ret;
 }
 
@@ -558,7 +655,15 @@ unsigned int LoRaE5Class::transferPacketWithConfirmed(unsigned char *buffer,
     sprintf(cmd+strlen(cmd),"AT+CMSGHEX=\"");//name of the command
     for ( i = 0; i < length; i++) { sprintf(cmd+strlen(cmd), "%02x", buffer[i]);}//add the characters in hex format
     sprintf(cmd+strlen(cmd),"\"\r\n");//end of command
-    time_ret=at_send_check_response(cmd,"Done",timeout,NULL);
+    time_ret=at_send_check_response(cmd,"Wait ACK",timeout,NULL);
+    /*wait to Open reception Window*/
+	time_ret=+RXWIN1_DELAY;
+	/*sleep the device until new reception window*/
+	//setDeviceLowPower();
+	delay(RXWIN1_DELAY);
+	/*Awakes the device until new reception window*/
+	//setDeviceWakeUp();
+	time_ret=+at_send_check_response(NULL,"Done",timeout,NULL);
     return time_ret;
 }
 
@@ -852,11 +957,40 @@ unsigned int LoRaE5Class::setOTAAJoin(_otaa_join_cmd_t command,
     return time_cmd;//Returned time to succesfully execute a command. 0 if the command was not ACK by Gateway.
 }
 
-unsigned int LoRaE5Class::setDeviceLowPower(void) {
+unsigned int LoRaE5Class::setDeviceBaudRate(_baudrate_bps_supported baud_rate ) {
     unsigned int time_cmd=0;//Returned time to succesfully execute a command. 
     cmd[0]='\0';//reset the string position
-    sprintf(cmd,"AT+LOWPOWER\r\n");
+	cmd_resp_ack[0]='\0';//reset the string position
+    sprintf(cmd,"AT+UART=BR, %i\r\n",baud_rate);
+	sprintf(cmd_resp_ack,"%i",baud_rate);
+	bool mode=lowpower_auto;
+	lowpower_auto=true;//set temporaly to true in order to ensure a proper working with the device
+    time_cmd=at_send_check_response(cmd,cmd_resp_ack,DEFAULT_TIMEWAIT,NULL);
+	setDeviceReset();
+    lowpower_auto=mode;//return to original value
+	SerialLoRa.end();//end before initing a serial port
+	initSerial(baud_rate);
+	delay(10);//delay 6 mseconds for next command
+    return(time_cmd);
+}
+unsigned int LoRaE5Class::setDeviceLowPower(unsigned int time_to_wakeup_ms) {
+    unsigned int time_cmd=0;//Returned time to succesfully execute a command. 
+    cmd[0]='\0';//reset the string position
+	if (time_to_wakeup_ms==0){sprintf(cmd,"AT+LOWPOWER\r\n");}
+	else                   {sprintf(cmd,"AT+LOWPOWER=%i\r\n",time_to_wakeup_ms);}
     time_cmd=at_send_check_response(cmd,"+LOWPOWER: SLEEP",DEFAULT_TIMEWAIT,NULL);
+    return(time_cmd);
+}
+unsigned int LoRaE5Class::setDeviceLowPowerAutomode(bool mode) {
+    unsigned int time_cmd=0;//Returned time to succesfully execute a command. 
+    cmd[0]='\0';//reset the string position
+	if (mode){sprintf(cmd,"AT+LOWPOWER=AUTOON\r\n");}
+	else     {sprintf(cmd,"AT+LOWPOWER=AUTOOFF\r\n");}
+	if (mode){time_cmd=at_send_check_response(cmd,"AUTOON",DEFAULT_TIMEWAIT,NULL);}
+	else     {lowpower_auto=true;
+		      time_cmd=at_send_check_response(cmd,"AUTOOFF",DEFAULT_TIMEWAIT,NULL);
+			  lowpower_auto=false;}
+	if (time_cmd>0){lowpower_auto=mode;}
     return(time_cmd);
 }
 unsigned int LoRaE5Class::setDeviceWakeUp(void) {
@@ -994,37 +1128,32 @@ short LoRaE5Class::receivePacketP2PMode(unsigned char *buffer, short length,
 
     return number;
 }
+/*return transmition time in ms*/
 float LoRaE5Class::getTransmissionTime(unsigned int payload_size){
   return(txHead_time+((float)(payload_size)*8*1000/bitRate));
   }
 /********************************************************************************/  
-  /*all the listed values need to be measured
-  *Only 60uA in sleep mode. To meassure
-  *Ultra-low Power Consumption: as low as 2.1uA sleep current (WOR mode)
-  *datasheet info Active-mode RX: 4.82 mA
-  *Active-mode TX:     15 mA at 10 dBm and 87 mA at 20 dBm (LoRa ® 125 kHz)
-  *Active-mode TX 490 :13 mA at 10 dBm, 21 mA at 14 dBm and 72 mA at 20 dBm
-  *Active-mode TX 868 :17.5mA at 10 dBm, 26 mA at 14 dBm and 92 mA at 20 dBm */
-  
-float LoRaE5Class::getTransmissionPower(unsigned int payload_size){
-  float tx_power_consumption,tx_time;
+float LoRaE5Class::getTransmissionPower(unsigned int payload_size, float tx_period_s){
+  float tx_power_consumption,tx_time,rx_time;
   /*Get the power used*/
-  if (freq_band>860){
-    if ((txPower>14))              {tx_power_consumption=((90)/6)*txPower;}
-    if ((txPower<15)or(txPower>10)){tx_power_consumption=(26/14)*txPower;}
-    if ((txPower<11))               {tx_power_consumption=(17.5/10)*txPower;}
+  if (freq_band>800){
+    if (txPower==16)              {tx_power_consumption=TXPOWER_16dBm_mA;}
+	if (txPower==14)              {tx_power_consumption=TXPOWER_14dBm_mA;}
+	if (txPower==12)              {tx_power_consumption=TXPOWER_12dBm_mA;}
+	if (txPower==10)              {tx_power_consumption=TXPOWER_10dBm_mA;}
+	if (txPower== 8)              {tx_power_consumption=TXPOWER_08dBm_mA;}
+	if (txPower== 6)              {tx_power_consumption=TXPOWER_06dBm_mA;}
+	if (txPower== 4)              {tx_power_consumption=TXPOWER_04dBm_mA;}
+	if (txPower== 2)              {tx_power_consumption=TXPOWER_02dBm_mA;}
+	if (txPower== 0)              {tx_power_consumption=TXPOWER_00dBm_mA;}
     }
-    else {
-      if (freq_band>420){
-        if ((txPower>14))              {tx_power_consumption=(72/20)*txPower;}
-        if ((txPower<15)or(txPower>10)){tx_power_consumption=(21/14)*txPower;}
-        if ((txPower<11))               {tx_power_consumption=(13/10)*txPower;}
-       }
-    }
-    /*Get the Tx time*/
+    /*Get the Tx time in ms*/
      tx_time=getTransmissionTime(payload_size);
+	 /*Stimate rx timein ms*/
+	 rx_time=txHead_time+50;//*add 50 ms additional to txheadtime. This was meassured during testing.
     /*perform the stimation*/
-   return(tx_power_consumption*tx_time/3600);//returns a value in mAh
+	/*Considers the time to Tx, time to Rx and power consuptiom while the module sleeps*/
+   return(((tx_power_consumption*tx_time+ RXPOWER_mA*(rx_time))/1000)*(1/tx_period_s)+SLEEPPOWER_mA);//returns a value in mAh
   }
 
 unsigned int LoRaE5Class::Debug(_debug_level value){
