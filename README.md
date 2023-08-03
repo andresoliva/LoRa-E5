@@ -1,5 +1,8 @@
 # LoRa-E5 Library
-Advanced application of SeedStudio module Grove-Wio-E5 based on chip STM32WLE5JC from STM connected to an Arduino board.
+This is a LoRa Arduino library created in order to allow the user an easy, clear and safe interaction with the [SeedStudio LoRa module Grove-Wio-E5](https://wiki.seeedstudio.com/Grove_LoRa_E5_New_Version/) based on chip [STM32WLE5JC from STM](file:///C:/Users/marconiadm/Downloads/stm32wle5jc-2.pdf).
+&nbsp;
+This work was done in order to be used as both an educational tool for those who are doing their first steps into LoRa and also prepared for the ones looking for using this module in low-power projects.
+&nbsp;
 <img src="./pictures/00_arduinoimport.png" width=50% align="right"> 
 
 ### Easy install and start
@@ -15,40 +18,28 @@ Advanced application of SeedStudio module Grove-Wio-E5 based on chip STM32WLE5JC
 
 ## Features:
 This project features a LoRa library that allows to perform a complete configuration of the [Seed's Grove-Wio-E5](https://wiki.seeedstudio.com/Grove_LoRa_E5_New_Version/) according to the user needs.
-This LoRa library is a modified version of the [Ramin Sangesari work](https://github.com/idreamsi/LoRaE5) with some major modifications in order to allow the library to detect a correct command reception in a more flexible way, optimize the performance and add some useful functionalities (see the key features below) like software serial compatibility with boards like Arduino Nano 33 BLE Sense. Is important to know that Ramin Sangesari's work (and therefore, this library) supports P2P communication between LoRa node devices, which means that communications happen directly between both end node devices without any Gateway involved in the communication.
+This LoRa library is based on the [Ramin Sangesari work](https://github.com/idreamsi/LoRaE5) (to whom I am very grateful) with some major modifications in order to allow the device to detect a correct command reception in a more flexible way, optimize the performance and add some useful functionalities (see the key features below) like software serial compatibility with boards like Arduino Nano 33 BLE Sense. Is important to know that Ramin Sangesari's work (and therefore, this library) supports P2P communication between LoRa node devices, which means that communications happen directly between both end node devices without any Gateway involved in the communication.
 ### Key features added:
-* Allows to make the use of SoftwareSerial (or Software UART) on boards like Arduino Nano 33BLE. This is useful if you are using a Grove shield that uses your main serial and you need to use other pins of your board as a Serial interface to communicate with the Grove-Wio-E5 module.
+* Allows to make the use of SoftwareSerial (or Software UART) on boards like Arduino Nano 33BLE Sense. This is useful if you are using a Grove shield that uses your main serial and you need to use other pins of your board as a Serial interface to communicate with the Grove-Wio-E5 module.
 * Support automatic Baud Rate detection and Baud Rate set-up over the module.
-*  Added examples of how to use the low power mode of the device and added a wakeUp function.
-* Added full support to low-power auto mode. This mode works in the following way: once you set it, the LoRa module enters into a deep sleep (21 uA when powered with 3.3V) automatically and wakes up if a command is send or the module should wake up for a Rx window. So there will be no need to call lora.setDeviceLowPower().
-* Allows to display commands sent, the responses from the Grove-Wio-E5 module and enable the print of them. Also allows the device to measure the time it took to both send the command and receive a response from Grove-Wio-E5 (and gateway ACK if there is a need for that). You can also enable or disable the printing of the command messages. This means that you can run the code with your debugging serial terminal disabled.
-* Supports the setup of Spread Factor and Bandwidth (if supported by your chosen Frequency Band ).
+* Added examples of how to use the low power mode of the device and added a wakeUp function.
+* Added full support to low-power auto mode. This mode works in the following way: once you set it, the LoRa module enters into a deep sleep (21 uA when powered with 3.3V) automatically and wakes up if a command is sent to the module or the module should wake up for a Rx window after sending a message to the gateway. So there will be no need to call lora.setDeviceLowPower().
+* Allows to display commands sent, the responses from the Grove-Wio-E5 module and enable/disable the print of them. Also allows the device to measure the time it took to both send the command and receive a response from Grove-Wio-E5 (and gateway ACK if there is a need for that). You can also enable or disable the printing of the command messages. This means that you can run the code with your debugging serial terminal disabled.
+* Supports the direct setup of Spread Factor and Bandwidth (if supported by your chosen Frequency Band).
 * Allows the use of the different debug modes (DEBUG/INFO/WARN/ERROR/FATAL/PANIC/QUIET).
 * Allows to estimate the time that is going to take to send a message based on your selected DR (or combination of Spread Factor and BandWidth) and LoRaWAN Frequency band (like EU868).
 * Allows the user to estimate the amount of power used to send a message based on transmission power, periodicity and amounts of bytes. This estimation is made considering the ACK response from the gateway and considers the LoRa module sleep current (21 uA). This means, that if you don't transmit information, your power consumption will be 21 uA because of the sleep current of the module. The power consumption estimation uses the results of measurements made with the LoRa module powered with 3.3V. 
 * Added an example to change the DevEUI of the device in order to make the testing of different codes simpler when interacting with a LoRa Gateway.IMPORTANT: When you change the DevEUI, this change will last even if you turn off the device, so be aware of what you are doing.
-* Added examples to perform a transmission power Sweep and Spread factor Sweep, featuring tested examples working in low power mode using Automode and packet transmission with ACK. 
+* Added examples to perform a transmission power Sweep and Spread factor Sweep, featuring tested examples working in low power mode using the Low Power Automode feature and packet transmission with ACK. 
 ## Hardware Setup:
-For . You can find [in this project](https://github.com/andresoliva/Grove-Wio-E5) how to connect your Arduino Nano to  Grove-Wio-E5. This library also features the use of an .
+For running this library you will need an Arduino board and a [Grove-Wio-E5 module]([https://www.seeedstudio.com/Grove-LoRa-E5-STM32WLE5JC-p-4867.html?queryID=a5c3fb3bdd44e3b95c1c06bfd316bc1a&objectID=4867&indexName=bazaar_retailer_products](https://www.seeedstudio.com/Grove-LoRa-E5-STM32WLE5JC-p-4867.html)). You can find [in this project](https://github.com/andresoliva/Grove-Wio-E5) how to connect your Arduino to the Grove-Wio-E5 in case you don't have a Grove expansion board. Also, all of the included examples explain how to specify the Tx and Rx pins of your Arduino in order to connect it to the Grove-Wio-E5 module.
 ## LoRa library important configuration:
-Here are listed some parts of the project file that allows you to set up this configuration.
-#### LoRa.h Serial port selection
-```html
-/*If you want to use other pins as serial interfaces in boards like Arduino Nano BLE33 which does not support the
-"SerialLoRa.begin(9600, SERIAL_8N1, rx, tx)" function call, enable this: */
-```
-#### LoRa.h Serial port selection
+Here are listed some parts of the project files (inside LoRa.h) that allows you to change the default configuration of the library and some of the examples included.
+#### LoRa.h 
 ```html
 /*--------------PRINT TIME --------------------------*/
 /*Define to print to the USER into UART terminal the commands messages sent and response received */
 #define COMMAND_PRINT_TO_USER
-/*Define to print the result of times measures
-Important Note: This time is measured using because of this, this is only an estimation
-Regarding Transmition time: it was tested and it cannot be measured properly using this method
-What you get instead is the transmission time + the time to get ACK from the gateway. Because the transmission time 
-is included, if you subtract the times of two transmissions with different payloads, it will be the subtraction
-of the transmission times. In this way, you can compare the times changes due to the payload size and know what to spect*/
-#define COMMAND_PRINT_TIME_MEASURE
 ```
 ## Proyect important configuration:
 Inside Grove-Wio-E5_advanced.ino
@@ -77,8 +68,9 @@ The implemented example consists of:
 * A loop transmission of one string packet (with port 7) and two hex packets (with port 8). The use of different ports allow the Gateway to decode the packet contents according to the content (bytes or string)
 * A comparison between the expected differences in time when transmitting messages with 10 and 50 bytes of payload.
 * Entering Low Power and Wake up functions to optimize performance.
+* NEW!: Added Power and Spread factor Seeps example featuring the use of LowPowerAutomode function, which has proved to be more efficient in terms of power consumption compared to calling Low Power and Wake up functions.
 ### Commands expected responses
-Here goes a list of what you should be seeing in your terminal based on this project configuration. You can see the [Grove-Wio-E5 commands list](https://files.seeedstudio.com/products/317990687/res/LoRa-E5%20AT%20Command%20Specification_V1.0%20.pdf) for more information.
+Here goes a list of what you should be seeing in your terminal based on this project configuration. You can see the [Grove-Wio-E5 commands list](https://files.seeedstudio.com/products/317990687/res/LoRa-E5%20AT%20Command%20Specification_V1.0%20.pdf) for more information (and a better explanation).
 #### Initial set Up
 
 ```html
@@ -229,7 +221,7 @@ In my case, I am working on a Milesight UG67 Gateway working on the EU868 Band. 
  * Type the Gateway address (192.168.1.1) and log in using the admin and password of the gateway.
 
 ### Add your device to the gateway
-Before adding our device to the gateway, which will allow our LoRa module to join the network, we need to set up other fields first/
+Before adding our device to the gateway, which will allow our LoRa module to join the network, we need to set up other fields first.
 
 #### Create your device profile
 <img src="./pictures/02_profile_create.png" width=90% align="center"> 
@@ -244,6 +236,8 @@ This field is used to tell the gateway how to interact. We will not use it in th
 &nbsp;
 #### Payload Codec
 This field tells the Gateway how to convert the information received in the payload into human-readable information.
+<img src="./pictures/02_payload_create.png" width=90% align="center"> 
+
 We insert this json code in order to decode the packets.
 ```html
 
@@ -287,23 +281,35 @@ return msg;
 
 #### Adding your device
 At last, we can add our device. Remember that you will need all the names of the profile, application and payload Coded we created before, plus adding the DevEUI and APPKey. How to obtain the last ones was explained at the beginning of this tutorial.
-\ AppKey value: 2B7E151628AED2A609CF4F3CABF71588
-\ DevEUI value: Get it by looking at your serial terminal!. In the "Grove-Wio-E5_basic" example you can look at the DevEUI of your device each time the device fails to join the network.
+&nbsp;
 
-<img src="./pictures/02_payload_create.png" width=90% align="center"> 
+AppKey value: 2B7E151628AED2A609CF4F3CABF71588
+&nbsp;
+
+DevEUI value: Get it by looking at your serial terminal! In the "Grove-Wio-E5_basic" example you can look at the DevEUI of your device each time the device fails to join the network.
+&nbsp;
+
+With this information and the work done so far, you should be able to fill all the listed fields in order to add your device to the Gateway, as seen in the following picture:
+
+<img src="./pictures/03_device_add.png" width=80% align="center"> 
 
 ### Network joined and packet Reception
-To verify if the device
-<img src="./pictures/03_device_add.png" width=80% align="center"> 
-You can also go to packets and 
+To verify if the device has joined the network and successfully sent a packet, go here:
+&nbsp;
+&nbsp;
 <img src="./pictures/04_device_add_rx.png" width=80% align="center"> 
 
-#### Check the content of the packes
+#### Check the content of the packets and the decode functions
+You can also go to packets and see the content received
 <img src="./pictures/05_packets.png" width=80% align="center"> 
 <img src="./pictures/06_packets_list.png" width=100% align="center"> 
-<img src="./pictures/07_packets_bin.png" width=80% align="center"> 
-<img src="./pictures/07_packets_string.png" width=80% align="center"> 
+&nbsp;
+A packet with binary content (Port 7):
 
-#### Packet Reception verification
+<img src="./pictures/07_packets_bin.png" width=80% align="center">
+&nbsp;
+A packet with string content (Port 8):
+
+<img src="./pictures/07_packets_string.png" width=80% align="center"> 
 ## To test:
   * Re-test P2P communication after library rework.
