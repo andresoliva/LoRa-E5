@@ -970,7 +970,6 @@ unsigned int LoRaE5Class::setDeviceBaudRate(_baudrate_bps_supported baud_rate ) 
     lowpower_auto=mode;//return to original value
 	SerialLoRa.end();//end before initing a serial port
 	initSerial(baud_rate);
-	delay(10);//delay 6 mseconds for next command
     return(time_cmd);
 }
 unsigned int LoRaE5Class::setDeviceLowPower(unsigned int time_to_wakeup_ms) {
@@ -1008,6 +1007,8 @@ unsigned int LoRaE5Class::setDeviceReset(void) {
     cmd[0]='\0';//reset the string position
     sprintf(cmd,"AT+RESET\r\n");
     time_cmd=at_send_check_response(cmd,"+RESET: OK",DEFAULT_TIMEWAIT,NULL);
+   /*delay 2000 msec after reset to ensure that the next command set will be responded*/
+	delay(2000);
     return(time_cmd);
 }
 

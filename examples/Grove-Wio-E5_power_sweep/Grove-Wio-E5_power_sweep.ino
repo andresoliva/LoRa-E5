@@ -72,7 +72,7 @@ void setup(void){
   Serial.begin(115200);/*Init Print Serial Port*/
   #endif
   /*Init the LoRa class after initing the serial print port */
-  lora.init(D0,D1);//D0,D1/* call lora.init(Arduino_Tx_PIN,Arduino_Rx_PIN) to use software serial. Example: lora.init(D2,D3) */
+  lora.init();/* call lora.init(Arduino_Tx_PIN,Arduino_Rx_PIN) to use software serial. Example: lora.init(D2,D3) */
   /*First get device EUI for later printing*/
   lora.getId(char_temp,DevEui); 
   /*Debug mode will give you additional info to know what is happening*/
