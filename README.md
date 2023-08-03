@@ -1,6 +1,5 @@
 # LoRa-E5 Library
-Advanced application of SeedStudio module Grove-Wio-E5 based on chip STM32WLE5JC from STM connected to an Arduino Nano 33 BLE Sense board.
-
+Advanced application of SeedStudio module Grove-Wio-E5 based on chip STM32WLE5JC from STM connected to an Arduino board.
 <img src="./pictures/00_arduinoimport.png" width=50% align="right"> 
 
 ### Easy install and start
@@ -16,16 +15,19 @@ Advanced application of SeedStudio module Grove-Wio-E5 based on chip STM32WLE5JC
 
 ## Features:
 This project features a LoRa library that allows to perform a complete configuration of the [Seed's Grove-Wio-E5](https://wiki.seeedstudio.com/Grove_LoRa_E5_New_Version/) according to the user needs.
-This LoRa library is a modified version of the [Ramin Sangesari work](https://github.com/idreamsi/LoRaE5) with some modification in order to allow the library to detect,  optimize the performance and add some useful functionalities like software serial compatibility with boards like Arduino Nano 33 BLE Sense. Is important to know that Ramin Sangesari's work (and therefore, this library) supports P2P communication between LoRa node devices, which means that communications happen directly between both end node devices without any Gateway involved in the communication.
+This LoRa library is a modified version of the [Ramin Sangesari work](https://github.com/idreamsi/LoRaE5) with some major modifications in order to allow the library to detect a correct command reception in a more flexible way, optimize the performance and add some useful functionalities (see the key features below) like software serial compatibility with boards like Arduino Nano 33 BLE Sense. Is important to know that Ramin Sangesari's work (and therefore, this library) supports P2P communication between LoRa node devices, which means that communications happen directly between both end node devices without any Gateway involved in the communication.
 ### Key features added:
 * Allows to make the use of SoftwareSerial (or Software UART) on boards like Arduino Nano 33BLE. This is useful if you are using a Grove shield that uses your main serial and you need to use other pins of your board as a Serial interface to communicate with the Grove-Wio-E5 module.
-* Allows to display commands sent, the responses from the Grove-Wio-E5 module and enable the print of them. Also allows the device to measure the time it took to both send the command and receive a response from Grove-Wio-E5 (and gateway ACK if there is a need for that)
-* You can enable or disable the printing of the command messages. This means that you can run the code with your debugging serial terminal disabled.
-* Supports the setup of Spread Factor and Bandwidth (if supported by your chosen  ).
+* Support automatic Baud Rate detection and Baud Rate set-up over the module.
+*  Added examples of how to use the low power mode of the device and added a wakeUp function.
+* Added full support to low-power auto mode. This mode works in the following way: once you set it, the LoRa module enters into a deep sleep (21 uA when powered with 3.3V) automatically and wakes up if a command is send or the module should wake up for a Rx window. So there will be no need to call lora.setDeviceLowPower().
+* Allows to display commands sent, the responses from the Grove-Wio-E5 module and enable the print of them. Also allows the device to measure the time it took to both send the command and receive a response from Grove-Wio-E5 (and gateway ACK if there is a need for that). You can also enable or disable the printing of the command messages. This means that you can run the code with your debugging serial terminal disabled.
+* Supports the setup of Spread Factor and Bandwidth (if supported by your chosen Frequency Band ).
 * Allows the use of the different debug modes (DEBUG/INFO/WARN/ERROR/FATAL/PANIC/QUIET).
 * Allows to estimate the time that is going to take to send a message based on your selected DR (or combination of Spread Factor and BandWidth) and LoRaWAN Frequency band (like EU868).
-* Added examples of how to use the low power mode of the device and added a wakeUp function.
+* Allows the user to estimate the amount of power used to send a message based on transmission power, periodicity and amounts of bytes. This estimation is made considering the ACK response from the gateway and considers the LoRa module sleep current (21 uA). This means, that if you don't transmit information, your power consumption will be 21 uA because of the sleep current of the module. The power consumption estimation uses the results of measurements made with the LoRa module powered with 3.3V. 
 * Added an example to change the DevEUI of the device in order to make the testing of different codes simpler when interacting with a LoRa Gateway.IMPORTANT: When you change the DevEUI, this change will last even if you turn off the device, so be aware of what you are doing.
+* Added examples to perform a transmission power Sweep and Spread factor Sweep, featuring tested examples working in low power mode using Automode and packet transmission with ACK. 
 ## Hardware Setup:
 For . You can find [in this project](https://github.com/andresoliva/Grove-Wio-E5) how to connect your Arduino Nano to  Grove-Wio-E5. This library also features the use of an .
 ## LoRa library important configuration:
@@ -304,5 +306,4 @@ You can also go to packets and
 
 #### Packet Reception verification
 ## To test:
-  * Meassure power consumption in low power mode. Add that Power Consumption estimation of the Library.
   * Re-test P2P communication after library rework.
