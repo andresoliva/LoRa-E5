@@ -311,5 +311,6 @@ A packet with binary content (Port 7):
 A packet with string content (Port 8):
 
 <img src="./pictures/07_packets_string.png" width=80% align="center"> 
-## To test:
+
+# To test:
   * Re-test P2P communication after library rework.
