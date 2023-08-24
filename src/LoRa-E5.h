@@ -53,14 +53,19 @@ of the transmission times. In this way, you can compare the times changes due to
  #define SerialUSB  Serial
 #endif 
 /*If you are not using Custom Serial, make this define */
-  #if defined(ESP32)
-    #define SerialLoRa_native Serial2    //M5Stack ESP32 Camera Module Development Board
+  #if (defined(ESP32)||defined(ESP32S3))
+    //#define SerialLoRa_native Serial    //M5Stack ESP32 Camera Module Development Board
+    // HardwareSerial SerialLoRa(0);    //M5Stack ESP32 Camera Module Development Board
+    
+    //#define UART_LoRa         HardwareSerial
   #else
     #define SerialLoRa_native Serial1    //For SAMD Variant and XIAO NRF
+    #define UART_LoRa         UART
   #endif
 
-#define DEFAULT_TIMEOUT   3000  //milliseconds to max wait for a command to get a response
-#define DEFAULT_TIMEWAIT  100  //DO NOT CHANGE: milliseconds to wait after issuing command via serial and not getting an specific response
+#define DEFAULT_TIMEOUT   	 3000  //milliseconds to max wait for a command to get a response
+#define DEFAULT_TIMEOUT_ReTx 1000  //milliseconds to max wait for a command to get a response for transferPacketWithConfirmedReTransmission command 
+#define DEFAULT_TIMEWAIT     100  //DO NOT CHANGE: milliseconds to wait after issuing command via serial and not getting an specific response
 
 #define AT_NO_ACK "NO_ACK"  //For not checking the command response in order to send a command error
 /*PARAMETERS FIDEX*/
@@ -484,7 +489,19 @@ unsigned int setFrequencyBand(_physical_type_t physicalType);
     unsigned int transferPacketWithConfirmed(unsigned char *buffer,
                                      unsigned char length,
                                      unsigned int timeout = DEFAULT_TIMEOUT);
-
+  /**
+     *  \brief Transfer the data
+     *
+     *  \param [in] *buffer The transfer data cache
+     *  \param [in] length The length of data cache
+     *  \param [in] timeout The over time of transfer
+     *
+     *  \return Return bool. Ture : Confirmed ACK, false : Confirmed NOT ACK
+     */
+    unsigned int transferPacketWithConfirmed(unsigned char *buffer,
+                                     unsigned char length,
+									 _spreading_factor_t SF_init,_spreading_factor_t SF_end,
+                                     unsigned int timeout = DEFAULT_TIMEOUT);
     /**
      *  \brief Receive the data
      *
@@ -737,10 +754,13 @@ unsigned int setFrequencyBand(_physical_type_t physicalType);
     bool lowpower_auto; /*LowPower Autoonmode enable*/
     bool adaptative_DR; /*Adatpative data rate. is true by default in the module*/
     unsigned int bitRate; /*[bitsps]set only by "getbitRate" function. Must be called before reading this variable */
-    float txHead_time;   /*[miliseconds]set only by "getbitRate" function Must be called before reading this variable*/
-    float freq_band;    /*[MHz]set only by "setDataRate" or "SetSpreadFactor" function Must be called before reading this variable*/
-    short txPower;    /*[dBm]set only by "setPower" or "SetSpreadFactor" function Must be called before reading this variable*/
-
+    float txHead_time;   /*[miliseconds]set only by "getbitRate" function. Must be called before reading this variable*/
+    float freq_band;    /*[MHz]set only by "setDataRate" or "SetSpreadFactor" function. Must be called before reading this variable*/
+    short txPower;    /*[dBm]set only by "setPower" or "SetSpreadFactor". function Must be called before reading this variable*/
+    _spreading_factor_t SF_last;/* Last set Spread Factor*/
+	_band_width_t BW_last;/* Last set Spread Factor*/
+	_physical_type_t FREQBAND_last;/* Last set Spread Factor*/
+	
 	
     char recv_buf[BEFFER_LENGTH_MAX];//reception buffer. Commands response can be up to 400 bytes according to data sheet examples
     char cmd[556];//store command to send
@@ -748,9 +768,15 @@ unsigned int setFrequencyBand(_physical_type_t physicalType);
     #ifdef COMMAND_PRINT_TIME_MEASURE
     char cmd_time[128];//store commands time response
     #endif
-    UART SerialLoRa;//memory allocate the serial lora inside the class. Used to allow a construction of the class outside
+	/*define LoRa port*/
+	#if !(defined(ESP32)||defined(ESP32S3))	
+   // HardwareSerial SerialLoRa(0);//memory allocate the serial lora inside the class. Used to allow a construction of the class outside
+    //#else
+    UART_LoRa SerialLoRa;//memory allocate the serial lora inside the class. Used to allow a construction of the class outside
+    #endif
 };
-
+ //HardwareSerial SerialLoRa(0);//memory allocate the serial lora inside the class. Used to allow a construction of the class outside
+    
 extern LoRaE5Class lora; /*Do not comment or change this!!. Original:extern LoRaE5Class lora;*/
 
 #endif

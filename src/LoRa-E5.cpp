@@ -31,7 +31,10 @@
 /*COMMAND LIST AND EXAMPLES*/
 //https://files.seeedstudio.com/products/317990687/res/LoRa-E5%20AT%20Command%20Specification_V1.0%20.pdf
 #include "LoRa-E5.h"
-
+  #if (defined(ESP32)||defined(ESP32S3))
+    //#define SerialLoRa_native Serial    //M5Stack ESP32 Camera Module Development Board
+     HardwareSerial SerialLoRa(0);    //M5Stack ESP32 Camera Module Development Board
+  #endif  
 const char *physTypeStr[10] = {"EU434",        "EU868", "US915", "US915HYBRID",
                                "AU915",        "AS923", "CN470", "KR920",
                                "CN470PREQUEL", "STE920"};
@@ -54,19 +57,23 @@ void LoRaE5Class::initSerial(_baudrate_bps_supported baud_rate){
       SerialUSB.print(baud_rate); /*print the command*/
 	 #endif 
 	if((uart_tx==0)and(uart_rx==0)){
-	 /*Init UART with default pins if were not provided*/	
-	 memcpy(&SerialLoRa,&SerialLoRa_native, sizeof(SerialLoRa));
-     SerialLoRa.begin((unsigned int)baud_rate);   /*For software LoRa serial*/   
+    #if (defined(ESP32)||defined(ESP32S3))
+    SerialLoRa.begin(baud_rate); //M5Stack ESP32 Camera Module Development Board 
+     #else
+     	   /*Init UART with default pins if were not provided*/	
+	   memcpy(&SerialLoRa,&SerialLoRa_native, sizeof(SerialLoRa));
+     SerialLoRa.begin((unsigned int)baud_rate);   /*For software LoRa serial*/  
+     #endif
 	}
 	else{
 	/*Init UART with the pins provided*/	
-	  #if defined(ESP32)
+	  #if (defined(ESP32)||defined(ESP32S3))
         SerialLoRa.begin(baud_rate, SERIAL_8N1, uart_rx, uart_tx); //M5Stack ESP32 Camera Module Development Board 
       #else
         #ifdef PRINT_TO_USER 
         Serial.print("\r\nIMPORTANT: RUNNING serial port used with LoRa communication as a SoftwareSerial");/*to print the obtained characters*/
         #endif
-        UART SerialLoRa_aux(uart_tx,uart_rx);//you have to call the constructor in this way
+        UART_LoRa SerialLoRa_aux(uart_tx,uart_rx);//you have to call the constructor in this way
         memcpy(&SerialLoRa,&SerialLoRa_aux, sizeof(SerialLoRa));
         SerialLoRa.begin(baud_rate,SERIAL_8N1);   /*For software LoRa serial*/  
       #endif  
@@ -83,10 +90,16 @@ bool LoRaE5Class::init_first_call(void) { //For Hardware Serial
       #endif
 	 lowpower_auto=true;/*Set here just if automode was disabled in a previous program*/
 	 if(at_send_check_response("AT+\r\n","AT",DEFAULT_TIMEWAIT, NULL)==0){
-	    SerialLoRa.end();
+	    SerialLoRa.flush();
+      delay(1);
+      SerialLoRa.end();
+      delay(100);
 	    initSerial(BR_38400); 
 	    if(at_send_check_response("AT+\r\n","AT",DEFAULT_TIMEWAIT, NULL)==0){
-		   SerialLoRa.end();
+	       SerialLoRa.flush();
+         delay(1);
+         SerialLoRa.end();
+         delay(100);
 	       initSerial(BR_115200); 
 		   if(at_send_check_response("AT+\r\n","AT",DEFAULT_TIMEWAIT, NULL)==0){
 		     ;;
@@ -387,6 +400,7 @@ unsigned int LoRaE5Class::setFrequencyBand(_physical_type_t physicalType){
 	 }
 	 /*Stores frequency band if command was ok*/
 	if(time_cmd){ /*if command response ok, store the band set value*/
+	  FREQBAND_last=physicalType;
       if (physicalType==EU434){freq_band=434;}
       if (physicalType==EU868){freq_band=868;}
       if (physicalType==US915 or physicalType==US915HYBRID){freq_band=915;}
@@ -474,6 +488,10 @@ if(DR!=DRNONE){
     SerialUSB.print("\r\nSetting Data Rate according to Spread factor (SF), BandWidth (BW) and LoRaWAN Standard Band Plan selected");
     #endif 
     time_cmd=setDataRate(DR,UNINIT); /*Set only DR.*/
+	if (time_cmd>0){
+		BW_last=BW;
+		SF_last=SF;
+	}
 	SF_BW_to_bitrate_txhead_time(SF,BW); /*update the variables values*/
    }
 else{
@@ -658,15 +676,32 @@ unsigned int LoRaE5Class::transferPacketWithConfirmed(unsigned char *buffer,
     time_ret=at_send_check_response(cmd,"Wait ACK",timeout,NULL);
     /*wait to Open reception Window*/
 	time_ret=+RXWIN1_DELAY;
-	/*sleep the device until new reception window*/
-	//setDeviceLowPower();
+	/*sleep the device if automode until new reception window*/
 	delay(RXWIN1_DELAY);
 	/*Awakes the device until new reception window*/
-	//setDeviceWakeUp();
 	time_ret=+at_send_check_response(NULL,"Done",timeout,NULL);
     return time_ret;
 }
-
+unsigned int LoRaE5Class::transferPacketWithConfirmed(unsigned char *buffer,
+                                     unsigned char length,
+									 _spreading_factor_t SF_init,_spreading_factor_t SF_end,
+                                     unsigned int timeout){
+    unsigned int time_ret=0;	
+    unsigned int time_ret_r=millis();	
+for (unsigned int i = (unsigned int)SF_init; i < ((unsigned int)SF_end+1); ++i){
+	         #ifdef COMMAND_PRINT_TO_USER
+            cmd[0]='\0';//reset the string
+            sprintf(cmd,"\r\nTransmiting packet with SF%i", i);
+            SerialUSB.print(cmd);
+           #endif
+		   delay(50);//delay for ensuring proper behaivour
+		   setSpreadFactor((_spreading_factor_t)i,BW_last,FREQBAND_last);//unsigned int LoRaE5Class::setSpreadFactor(_spreading_factor_t SF, _band_width_t BW,_physical_type_t physicalType){
+		   time_ret=transferPacketWithConfirmed(buffer, length,  1000+ (i-6)*timeout); 
+		   if (time_ret>0){break;}/*if time_ret>0 means that the message was ACK, so we break the RTX loop*/
+}
+time_ret_r=millis()-time_ret_r;
+return(time_ret_r);						 
+}
 short LoRaE5Class::receivePacket(char *buffer, short length, short *rssi,unsigned int timeout) {
     char *ptr;
     short number = 0;
@@ -903,12 +938,12 @@ unsigned int LoRaE5Class::setClassType(_class_type_t type) {
               #ifdef COMMAND_PRINT_TO_USER
               SerialUSB.print( "\r\nInvalid value for setClassType");
               #endif 
-              return 0;
              } 
           }    
     sprintf(cmd, "AT+CLASS=%c\r\n", class_X);
     sprintf(cmd_resp_ack, "CLASS: %c", class_X);//must return the BW in ks
-    time_cmd=+at_send_check_response(cmd,cmd_resp_ack,DEFAULT_TIMEWAIT,NULL);
+    time_cmd=at_send_check_response(cmd,cmd_resp_ack,DEFAULT_TIMEWAIT,NULL);
+    return(time_cmd);
 }
 
 //
@@ -1151,7 +1186,7 @@ float LoRaE5Class::getTransmissionPower(unsigned int payload_size, float tx_peri
     /*Get the Tx time in ms*/
      tx_time=getTransmissionTime(payload_size);
 	 /*Stimate rx timein ms*/
-	 rx_time=txHead_time+50;//*add 50 ms additional to txheadtime. This was meassured during testing.
+	 rx_time=txHead_time+55;//*add 55 ms additional to txheadtime. This was meassured during testing.
     /*perform the stimation*/
 	/*Considers the time to Tx, time to Rx and power consuptiom while the module sleeps*/
    return(((tx_power_consumption*tx_time+ RXPOWER_mA*(rx_time))/1000)*(1/tx_period_s)+SLEEPPOWER_mA);//returns a value in mAh
