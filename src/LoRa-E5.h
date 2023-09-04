@@ -32,14 +32,14 @@
 /*Define to print to the USER into UART terminal the commands messages sent and response received */
 /*--------------PRINT TIME --------------------------**/
 /*Define to print to the USER into UART terminal the commands messages sent and response received */
-#define COMMAND_PRINT_TO_USER
+//#define COMMAND_PRINT_TO_USER
 /*Define to print the result of times measures
 Important Note: This time is measured using because of this, this is only an estimation
 Regarding Transmition time: it was tested and it cannot be measured properly using this method
 What you get instead is the transmission time + the time to get ACK from the gateway. Because the transmission time 
 is included, if you subtract the times of two transmissions with different payloads, it will be the subtraction
 of the transmission times. In this way, you can compare the times changes due to the payload size and know what to spect*/
-#define COMMAND_PRINT_TIME_MEASURE
+//#define COMMAND_PRINT_TIME_MEASURE
 
 /*defines dependensies to avoid a CRASH of the program*/
 #ifdef COMMAND_PRINT_TIME_MEASURE
@@ -750,10 +750,12 @@ unsigned int setFrequencyBand(_physical_type_t physicalType);
     void SF_BW_to_bitrate_txhead_time(_spreading_factor_t SF, _band_width_t BW);/*stimate time to tx based on selected parameters*/
 	bool init_first_call(void);/*Function only to be called by first LoRa Init*/
     void initSerial(_baudrate_bps_supported baud_rate); /*allows an easy init of the serial port*/
+	void endSerial(void); /*allows an easy "end" of the serial port*/
     uint8_t uart_tx, uart_rx ;   /*Uart Tx and RX pins for communication with LoRa_WIO*/
     bool lowpower_auto; /*LowPower Autoonmode enable*/
     bool adaptative_DR; /*Adatpative data rate. is true by default in the module*/
-    unsigned int bitRate; /*[bitsps]set only by "getbitRate" function. Must be called before reading this variable */
+    _baudrate_bps_supported baud_rate_set;/*last baud rate set*/
+	unsigned int bitRate; /*[bitsps]set only by "getbitRate" function. Must be called before reading this variable */
     float txHead_time;   /*[miliseconds]set only by "getbitRate" function. Must be called before reading this variable*/
     float freq_band;    /*[MHz]set only by "setDataRate" or "SetSpreadFactor" function. Must be called before reading this variable*/
     short txPower;    /*[dBm]set only by "setPower" or "SetSpreadFactor". function Must be called before reading this variable*/
@@ -770,8 +772,6 @@ unsigned int setFrequencyBand(_physical_type_t physicalType);
     #endif
 	/*define LoRa port*/
 	#if !(defined(ESP32)||defined(ESP32S3))	
-   // HardwareSerial SerialLoRa(0);//memory allocate the serial lora inside the class. Used to allow a construction of the class outside
-    //#else
     UART_LoRa SerialLoRa;//memory allocate the serial lora inside the class. Used to allow a construction of the class outside
     #endif
 };

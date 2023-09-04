@@ -40,7 +40,7 @@ const char *physTypeStr[10] = {"EU434",        "EU868", "US915", "US915HYBRID",
                                "CN470PREQUEL", "STE920"};
 
 LoRaE5Class::LoRaE5Class(void) {
-    lowpower_auto=false; /*LowPower Autoonmode enable*/
+    lowpower_auto=false; /*LowPower Autoonmode disabled by defaukt*/
     adaptative_DR=true; /*Adatpative data rate. is true by default in the module*/
 	txPower=14;//14 is default set up
 	freq_band=0;
@@ -49,13 +49,18 @@ LoRaE5Class::LoRaE5Class(void) {
 }
 /*SERIAL CUSTOM MODE
 link: https://forum.arduino.cc/t/third-serial-on-nano-33-ble-can-be-software/929047/10  */
-
+void LoRaE5Class::endSerial(void){
+      SerialLoRa.flush();
+      delay(1);
+      SerialLoRa.end();
+}
 void LoRaE5Class::initSerial(_baudrate_bps_supported baud_rate){
 	/*proceed to init based if Tx and RX were provided during LoRa.init call*/
 	 #ifdef COMMAND_PRINT_TO_USER
       SerialUSB.print("\r\nSerialLora baud rate set:");  // Serial.print(p_p_cmd, args);
       SerialUSB.print(baud_rate); /*print the command*/
-	 #endif 
+	 #endif
+    baud_rate_set=baud_rate;	 
 	if((uart_tx==0)and(uart_rx==0)){
     #if (defined(ESP32)||defined(ESP32S3))
     SerialLoRa.begin(baud_rate); //M5Stack ESP32 Camera Module Development Board 
@@ -79,6 +84,8 @@ void LoRaE5Class::initSerial(_baudrate_bps_supported baud_rate){
       #endif  
 	}
 }
+
+
 /*first call of init inside the class*/
 bool LoRaE5Class::init_first_call(void) { //For Hardware Serial
      unsigned int cmd_time;
@@ -88,19 +95,19 @@ bool LoRaE5Class::init_first_call(void) { //For Hardware Serial
       #ifdef PRINT_TO_USER 
         Serial.print("\r\nTesting connection with the device");/*to print the obtained characters*/
       #endif
-	 lowpower_auto=true;/*Set here just if automode was disabled in a previous program*/
-	 if(at_send_check_response("AT+\r\n","AT",DEFAULT_TIMEWAIT, NULL)==0){
-	    SerialLoRa.flush();
-      delay(1);
-      SerialLoRa.end();
-      delay(100);
-	    initSerial(BR_38400); 
+	  
+	  lowpower_auto=true; /*set in case the device was left in lowpower_auto mode*/
+	  if(lowpower_auto){endSerial();}/*keep the if  for compatibility.*/
+      if(at_send_check_response("AT+\r\n","AT",DEFAULT_TIMEWAIT, NULL)==0){
+           //endSerial(); 
+           //delay(100);
+		   initSerial(BR_38400);
+	       if(lowpower_auto){endSerial();}/*keep the if  for compatibility.*/		   
 	    if(at_send_check_response("AT+\r\n","AT",DEFAULT_TIMEWAIT, NULL)==0){
-	       SerialLoRa.flush();
-         delay(1);
-         SerialLoRa.end();
-         delay(100);
+         //  endSerial(); 
+         //  delay(100);
 	       initSerial(BR_115200); 
+		   if(lowpower_auto){endSerial();}/*keep the if for compatibility.*/
 		   if(at_send_check_response("AT+\r\n","AT",DEFAULT_TIMEWAIT, NULL)==0){
 		     ;;
 		   }else{ret=true;}
@@ -110,6 +117,8 @@ bool LoRaE5Class::init_first_call(void) { //For Hardware Serial
 	    if(ret==true){Serial.print("\r\n GROOVE WIO-LoRa-E5 Detected");}/*to print the obtained characters*/
         if(ret==false){Serial.print("\r\nERROR: COULD NOT DETECT GROOVE WIO-LoRa-E5 module");}/*to print the obtained characters*/
       #endif
+	  //endSerial();//end last inited serial
+	  lowpower_auto=false;
 	 /*once the baud rate has been detected, work into that mode*/
 	 setDeviceLowPowerAutomode(false);//first thing to do is to set automode to false to avoid issues with this mode
      /*Wake Up the LoRa module*/
@@ -136,7 +145,7 @@ int startMillis;
 strncpy(buffer," ",sizeof(recv_buf));//fill the content with white spaces
 strlcpy(buffer," ",1);//Manually indicates end of string
 #ifdef COMMAND_PRINT_TO_USER
-SerialUSB.print("\r\nReading serial buffer");  // Serial.print(p_p_cmd, args);
+ SerialUSB.print("\r\nReading serial buffer");  // Serial.print(p_p_cmd, args);
 #endif
 //starting to read
 startMillis = millis();// Starts meassuring time after the command was sended
@@ -163,13 +172,15 @@ unsigned int LoRaE5Class::at_send_check_response(char* p_cmd, char* p_ack, unsig
     int index = 0;
     int ret_val=0;//init with 0 as default return value
     int startMillis;
+	/*init lora SPI if aoutomatic low power is on*/
+	if(lowpower_auto){initSerial(baud_rate_set);}
     /*clean reception buffer after starting with reception:*/
     strncpy(recv_buf," ",sizeof(recv_buf));//fill the content with white spaces
     strlcpy(recv_buf," ",1);//Manually indicates end of string
     /*clean the serial port before issuing the command*/
     while (SerialLoRa.available() > 0){ ch = SerialLoRa.read();}//clean the read buffer
     startMillis = millis();//DO NOT MOVE FROM HERE Starts meassuring time BEFORE the command was sended. 
-	/*Send special chaarcter for compatibility with LOWPOWER=AUTOMODE*/
+	/*Send special character for compatibility with LOWPOWER=AUTOMODE at all times*/
 	if (lowpower_auto){SerialLoRa.write(0xff);SerialLoRa.write(0xff);SerialLoRa.write(0xff);SerialLoRa.write(0xff);};
 	/*Send the comand*/
 	if (!(p_cmd == NULL)){ SerialLoRa.print(p_cmd);} //sends command to Grove LoRa_E5 module
@@ -219,23 +230,25 @@ unsigned int LoRaE5Class::at_send_check_response(char* p_cmd, char* p_ack, unsig
       }/*End of While parsing loop*/
       if((strstr(AT_NO_ACK, p_ack) != NULL)){ret_val=millis() - startMillis;}//If this mode is selected, do not display     
       #ifdef COMMAND_PRINT_TO_USER
-      SerialUSB.print("--------Command responses:\r\n");
-      SerialUSB.print(recv_buf);
-      SerialUSB.print("\r\n--------End of Commands responses");
+       SerialUSB.print("--------Command responses:\r\n");
+       SerialUSB.print(recv_buf);
+       SerialUSB.print("\r\n--------End of Commands responses");
       #endif
       #ifdef COMMAND_PRINT_TIME_MEASURE
       /*add the time used to print*/
-      if (ret_val>0){sprintf(cmd_time+strlen(cmd_time),"\r\nTotal Command Time + Time to get ACK response: %i ms.",ret_val);}
+       if (ret_val>0){sprintf(cmd_time+strlen(cmd_time),"\r\nTotal Command Time + Time to get ACK response: %i ms.",ret_val);}
       /*print the accumulated message*/
-      if(strlen(cmd_time)>0){SerialUSB.print(cmd_time);}/*print if something was written*/
+       if(strlen(cmd_time)>0){SerialUSB.print(cmd_time);}/*print if something was written*/
       #endif
       #ifdef COMMAND_PRINT_TO_USER
-      if(ret_val==0){SerialUSB.print("\r\n!!Command Failed!! Did not get the expected \"Ok\" or \"ACK\" response from E5 module after sending the command.");}
+       if(ret_val==0){SerialUSB.print("\r\n!!Command Failed!! Did not get the expected \"Ok\" or \"ACK\" response from E5 module after sending the command.");}
       #endif
     /*---------------------------------------*/
     /*if a buffer was provided, copy the response to the buffer */
     if (not(p_response == NULL)) { strcpy(p_response, recv_buf);}  
-    /*end of code: return cmd elapsed time in ms or 0 if did not work */
+	//closes serial before return if lowpower_auto is on to save power
+     if(lowpower_auto){endSerial();}
+	/*end of code: return cmd elapsed time in ms or 0 if did not work */
     return ret_val;
 }
 
@@ -423,7 +436,7 @@ unsigned int LoRaE5Class::setDataRate(_data_rate_t dataRate,
 
     if ((dataRate <= UNINIT)) {
         #ifdef COMMAND_PRINT_TO_USER
-        SerialUSB.print("\r\n!!Unknown datarate\n");
+         SerialUSB.print("\r\n!!Unknown datarate\n");
         #endif
         return 0;
     }
@@ -485,7 +498,7 @@ if ((physicalType==EU868)or(physicalType==CN779)or
 
 if(DR!=DRNONE){
     #ifdef COMMAND_PRINT_TO_USER
-    SerialUSB.print("\r\nSetting Data Rate according to Spread factor (SF), BandWidth (BW) and LoRaWAN Standard Band Plan selected");
+     SerialUSB.print("\r\nSetting Data Rate according to Spread factor (SF), BandWidth (BW) and LoRaWAN Standard Band Plan selected");
     #endif 
     time_cmd=setDataRate(DR,UNINIT); /*Set only DR.*/
 	if (time_cmd>0){
@@ -496,7 +509,7 @@ if(DR!=DRNONE){
    }
 else{
     #ifdef COMMAND_PRINT_TO_USER
-    SerialUSB.print("\r\n ERORR: The combination of Spread factor (SF) and BandWidth (BW) is not supported LoRaWAN Standard Band Plan.Therefore, no Data rate was seeted. Example: For EU868 there is ot Data Rate defined for a SF=12 and BW=500K");
+     SerialUSB.print("\r\n ERORR: The combination of Spread factor (SF) and BandWidth (BW) is not supported LoRaWAN Standard Band Plan.Therefore, no Data rate was seeted. Example: For EU868 there is ot Data Rate defined for a SF=12 and BW=500K");
     #endif 
     time_cmd=0;
     }
@@ -611,9 +624,9 @@ unsigned int LoRaE5Class::transferPacket(char *buffer, unsigned int timeout) {
     int i;
     unsigned int time_ret;
     #ifdef COMMAND_PRINT_TO_USER
-    cmd[0]='\0';//reset the string
-    sprintf(cmd,"\r\nSending %i characters to a LoRa Gateway",(int)length);
-    SerialUSB.print(cmd);
+     cmd[0]='\0';//reset the string
+     sprintf(cmd,"\r\nSending %i characters to a LoRa Gateway",(int)length);
+     SerialUSB.print(cmd);
     #endif
     cmd[0]='\0';//reset the string
     sprintf(cmd,"AT+MSG=\"%s\"\r\n",buffer);
@@ -626,9 +639,9 @@ unsigned int LoRaE5Class::transferPacket(unsigned char *buffer, unsigned char le
     int i;
     unsigned int time_ret;
     #ifdef COMMAND_PRINT_TO_USER
-    cmd[0]='\0';//reset the string
-    sprintf(cmd,"\r\nSending %i bytes to a LoRa Gateway",(int)length);
-    SerialUSB.print(cmd);
+     cmd[0]='\0';//reset the string
+     sprintf(cmd,"\r\nSending %i bytes to a LoRa Gateway",(int)length);
+     SerialUSB.print(cmd);
     #endif
     cmd[0]='\0';//reset the string size
     sprintf(cmd+strlen(cmd),"AT+MSGHEX=\"");//name of the command
@@ -644,9 +657,9 @@ unsigned int LoRaE5Class::transferPacketWithConfirmed(char *buffer,
     int i;
     unsigned int time_ret;
     #ifdef COMMAND_PRINT_TO_USER
-    cmd[0]='\0';//reset the string
-    sprintf(cmd,"\r\nSending %i characters to a LoRa Gateway and waits for ACK",(int)length);
-    SerialUSB.print(cmd);
+     cmd[0]='\0';//reset the string
+     sprintf(cmd,"\r\nSending %i characters to a LoRa Gateway and waits for ACK",(int)length);
+     SerialUSB.print(cmd);
     #endif
     cmd[0]='\0';//reset the string
     sprintf(cmd,"AT+CMSG=\"%s\"\r\n",buffer);
@@ -665,9 +678,9 @@ unsigned int LoRaE5Class::transferPacketWithConfirmed(unsigned char *buffer,
     int i;
     unsigned int time_ret;
     #ifdef COMMAND_PRINT_TO_USER
-    cmd[0]='\0';//reset the string
-    sprintf(cmd,"\r\nSending %i bytes to a LoRa Gateway and waits for ACK",(int)length);
-    SerialUSB.print(cmd);
+     cmd[0]='\0';//reset the string
+     sprintf(cmd,"\r\nSending %i bytes to a LoRa Gateway and waits for ACK",(int)length);
+     SerialUSB.print(cmd);
     #endif
     cmd[0]='\0';//reset the string size
     sprintf(cmd+strlen(cmd),"AT+CMSGHEX=\"");//name of the command
@@ -689,7 +702,7 @@ unsigned int LoRaE5Class::transferPacketWithConfirmed(unsigned char *buffer,
     unsigned int time_ret=0;	
     unsigned int time_ret_r=millis();	
 for (unsigned int i = (unsigned int)SF_init; i < ((unsigned int)SF_end+1); ++i){
-	         #ifdef COMMAND_PRINT_TO_USER
+	       #ifdef COMMAND_PRINT_TO_USER
             cmd[0]='\0';//reset the string
             sprintf(cmd,"\r\nTransmiting packet with SF%i", i);
             SerialUSB.print(cmd);
@@ -794,9 +807,9 @@ unsigned int LoRaE5Class::transferProprietaryPacket(char *buffer,
     int i;
     unsigned int time_ret;
     #ifdef COMMAND_PRINT_TO_USER
-    cmd[0]='\0';//reset the string
-    sprintf(cmd,"\r\nSending %i characters in LoRaWAN proprietary frames format to a LoRa Gateway",(int)length);
-    SerialUSB.print(cmd);
+     cmd[0]='\0';//reset the string
+     sprintf(cmd,"\r\nSending %i characters in LoRaWAN proprietary frames format to a LoRa Gateway",(int)length);
+     SerialUSB.print(cmd);
     #endif
     cmd[0]='\0';//reset the string
     sprintf(cmd,"AT+PMSG=\"%s\"\r\n",buffer);
@@ -810,9 +823,9 @@ unsigned int LoRaE5Class::transferProprietaryPacket(unsigned char *buffer,
     int i;
     unsigned int time_ret;
     #ifdef COMMAND_PRINT_TO_USER
-    cmd[0]='\0';//reset the string
-    sprintf(cmd,"\r\nSending %i bytes in LoRaWAN proprietary frames format to a LoRa Gateway",(int)length);
-    SerialUSB.print(cmd);
+     cmd[0]='\0';//reset the string
+     sprintf(cmd,"\r\nSending %i bytes in LoRaWAN proprietary frames format to a LoRa Gateway",(int)length);
+     SerialUSB.print(cmd);
     #endif
     cmd[0]='\0';//reset the string size
     sprintf(cmd+strlen(cmd),"AT+PMSGHEX=\"");//name of the command
@@ -936,7 +949,7 @@ unsigned int LoRaE5Class::setClassType(_class_type_t type) {
            }
            else { 
               #ifdef COMMAND_PRINT_TO_USER
-              SerialUSB.print( "\r\nInvalid value for setClassType");
+               SerialUSB.print( "\r\nInvalid value for setClassType");
               #endif 
              } 
           }    
@@ -964,7 +977,7 @@ unsigned int LoRaE5Class::setDeviceMode(_device_mode_t mode) {
     else {
               #ifdef COMMAND_PRINT_TO_USER
                  SerialUSB.print("\r\nBad command to setDeviceMode.");   
-               #endif  
+              #endif  
     }
     return time_cmd;//Returned time to succesfully execute a command. 0 if the command was not ACK by Gateway.
 }
@@ -985,7 +998,7 @@ unsigned int LoRaE5Class::setOTAAJoin(_otaa_join_cmd_t command,
         time_cmd=at_send_check_response(cmd,"+JOIN: Network joined",timeout,NULL);
        }
     else {
-          #ifdef COMMAND_PRINT_TO_USER
+           #ifdef COMMAND_PRINT_TO_USER
             SerialUSB.print("Bad command to setOTAAJoin\n");
            #endif 
            }
@@ -1025,6 +1038,9 @@ unsigned int LoRaE5Class::setDeviceLowPowerAutomode(bool mode) {
 		      time_cmd=at_send_check_response(cmd,"AUTOOFF",DEFAULT_TIMEWAIT,NULL);
 			  lowpower_auto=false;}
 	if (time_cmd>0){lowpower_auto=mode;}
+	if(lowpower_auto){endSerial();}
+	             else{initSerial(baud_rate_set);}
+	/*Turn off serial for saving power*/
     return(time_cmd);
 }
 unsigned int LoRaE5Class::setDeviceWakeUp(void) {
@@ -1084,9 +1100,9 @@ unsigned int LoRaE5Class::transferPacketP2PMode(char *buffer) {
     unsigned int time_ret;
     unsigned char length=strlen(buffer);
     #ifdef COMMAND_PRINT_TO_USER
-    cmd[0]='\0';//reset the string
-    sprintf(cmd,"\r\nSending %i characters to a another LoRa End Node",(int)length);
-    SerialUSB.print(cmd);
+     cmd[0]='\0';//reset the string
+     sprintf(cmd,"\r\nSending %i characters to a another LoRa End Node",(int)length);
+     SerialUSB.print(cmd);
     #endif
     cmd[0]='\0';//reset the string
     sprintf(cmd,"AT+TXLRSTR=\"%s\"\r\n",buffer);
@@ -1099,9 +1115,9 @@ unsigned int LoRaE5Class::transferPacketP2PMode(unsigned char *buffer,
     int i;
     unsigned int time_ret;
     #ifdef COMMAND_PRINT_TO_USER
-    cmd[0]='\0';//reset the string
-    sprintf(cmd,"\r\nSending %i bytes to a another LoRa End Node",(int)length);
-    SerialUSB.print(cmd);
+     cmd[0]='\0';//reset the string
+     sprintf(cmd,"\r\nSending %i bytes to a another LoRa End Node",(int)length);
+     SerialUSB.print(cmd);
     #endif
     cmd[0]='\0';//reset the string size
     sprintf(cmd+strlen(cmd),"AT+TEST=TXLRPKT,\"");//name of the command
