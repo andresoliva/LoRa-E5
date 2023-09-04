@@ -17,11 +17,12 @@ This work was done in order to be used as both an educational tool for those who
 
 
 ## Features:
-NEW V1.1.3: Added automatic Serial port turn on/off when automode=true to save power from Arduino module. This means that the power consumption when the software is not transmitting or receiving messages will be 21 uA (which is the power consumption of the LoRa module when automode=true and the module is doing nothing).
-NEW V1.1.3: Tested and verified support for XIAO ESP32S3 board!.
+
 This project features a LoRa library that allows to perform a complete configuration of the [Seed's Grove-Wio-E5](https://wiki.seeedstudio.com/Grove_LoRa_E5_New_Version/) according to the user needs.
 This LoRa library is based on the [Ramin Sangesari work](https://github.com/idreamsi/LoRaE5) (to whom I am very grateful) with some major modifications in order to allow the device to detect a correct command reception in a more flexible way, optimize the performance and add some useful functionalities (see the key features below) like software serial compatibility with boards like Arduino Nano 33 BLE Sense. Is important to know that Ramin Sangesari's work (and therefore, this library) supports P2P communication between LoRa node devices, which means that communications happen directly between both end node devices without any Gateway involved in the communication.
 ### Key features added:
+* NEW V1.1.3: Added automatic Serial port turn on/off when automode=true to save power from Arduino module. This means that the power consumption when the software is not transmitting or receiving messages will be 21 uA (which is the power consumption of the LoRa module when automode=true and the module is doing nothing).
+* NEW V1.1.3: Tested and verified support for XIAO ESP32S3 board!.
 * Allows to make the use of SoftwareSerial (or Software UART) on boards like Arduino Nano 33BLE Sense. This is useful if you are using a Grove shield that uses your main serial and you need to use other pins of your board as a Serial interface to communicate with the Grove-Wio-E5 module.
 * Support automatic Baud Rate detection and Baud Rate set-up over the module.
 * Added examples of how to use the low power mode of the device and added a wakeUp function.
