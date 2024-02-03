@@ -1,5 +1,5 @@
 # LoRa-E5 Library
-This is a LoRa Arduino library created in order to allow the user an easy, clear and safe interaction with the [SeedStudio LoRa module Grove-Wio-E5](https://wiki.seeedstudio.com/Grove_LoRa_E5_New_Version/) based on chip [STM32WLE5JC from STM](file:///C:/Users/marconiadm/Downloads/stm32wle5jc-2.pdf).
+This is a LoRa Arduino library created in order to allow the user an easy, clear and safe interaction with the [Seeed Studio LoRa module Grove-Wio-E5](https://wiki.seeedstudio.com/Grove_LoRa_E5_New_Version/) based on chip [STM32WLE5JC from STM](file:///C:/Users/marconiadm/Downloads/stm32wle5jc-2.pdf).
 &nbsp;
 This work was done in order to be used as both an educational tool for those who are doing their first steps into LoRa and also prepared for the ones looking for using this module in low-power projects.
 &nbsp;
@@ -18,7 +18,7 @@ This work was done in order to be used as both an educational tool for those who
 
 ## Features:
 
-This project features a LoRa library that allows to perform a complete configuration of the [Seed's Grove-Wio-E5](https://wiki.seeedstudio.com/Grove_LoRa_E5_New_Version/) according to the user needs.
+This project features a LoRa library that allows to perform a complete configuration of the [Seeed's Grove-Wio-E5](https://wiki.seeedstudio.com/Grove_LoRa_E5_New_Version/) according to the user needs.
 This LoRa library is based on the [Ramin Sangesari work](https://github.com/idreamsi/LoRaE5) (to whom I am very grateful) with some major modifications in order to allow the device to detect a correct command reception in a more flexible way, optimize the performance and add some useful functionalities (see the key features below) like software serial compatibility with boards like Arduino Nano 33 BLE Sense. Is important to know that Ramin Sangesari's work (and therefore, this library) supports P2P communication between LoRa node devices, which means that communications happen directly between both end node devices without any Gateway involved in the communication.
 ### Key features added:
 * NEW V1.1.3: Added automatic Serial port turn on/off when automode=true to save power from Arduino module. This means that the power consumption when the software is not transmitting or receiving messages will be 21 uA (which is the power consumption of the LoRa module when automode=true and the module is doing nothing).
@@ -66,7 +66,7 @@ Inside Grove-Wio-E5_advanced.ino
 ```
 ## Example brief explanation:
 The implemented example consists of:
-* A complete set-up of the device in order to work with a EU868 LoRa Gateway in OTA mode. So you must add the DevEUI and settled AppKey of your device to the gateway in order to work like it was done in [SeedStudio's original example](https://wiki.seeedstudio.com/Grove_LoRa_E5_New_Version/#ttn-console-configuration-setup).
+* A complete set-up of the device in order to work with a EU868 LoRa Gateway in OTA mode. So you must add the DevEUI and settled AppKey of your device to the gateway in order to work like it was done in [Seeed Studio's original example](https://wiki.seeedstudio.com/Grove_LoRa_E5_New_Version/#ttn-console-configuration-setup).
 * The device will not send any packet until it joins the network. And this will only happen if you set your device properly to communicate with your Gateway by selecting the same Frequency band and configuring in the Gateway the DevEUI and settled AppKey.
 * A loop transmission of one string packet (with port 7) and two hex packets (with port 8). The use of different ports allow the Gateway to decode the packet contents according to the content (bytes or string)
 * A comparison between the expected differences in time when transmitting messages with 10 and 50 bytes of payload.
@@ -213,11 +213,11 @@ Measured difference between transmitting with 10 and 50 bytes as payload: 102.4 
 ```
 
 ## Gateway Configuration to allow interaction.
-As has been seen in the [Seedstudios's Grove_LoRa-E5 examples](https://wiki.seeedstudio.com/Grove_LoRa_E5_New_Version/#ttn-console-configuration-setup), in order to allow your Gateway to interact with your device (this means, to connect to the LoRaWAN network), you first need to make some setups in the Gateway. This tutorial will cover how to make this when your device is in OTA mode.
+As has been seen in the [Seeed Studios's Grove_LoRa-E5 examples](https://wiki.seeedstudio.com/Grove_LoRa_E5_New_Version/#ttn-console-configuration-setup), in order to allow your Gateway to interact with your device (this means, to connect to the LoRaWAN network), you first need to make some setups in the Gateway. This tutorial will cover how to make this when your device is in OTA mode.
 
 ### Enter the gateway
 <img src="./pictures/01_enter_gateway.png" width=60% align="right">
-Depending on the gateway. For example, if your gateway is already configured with [thethingsnetwork](https://www.thethingsnetwork.org/), you can follow the Seedtutorial.
+Depending on the gateway. For example, if your gateway is already configured with [thethingsnetwork](https://www.thethingsnetwork.org/), you can follow the Seeedtutorial.
 
 In my case, I am working on a Milesight UG67 Gateway working on the EU868 Band. This gateway is not connected to the internet, but it generates a local WiFI network, so in order to enter the gateway we need to:
  * Connect your PC to the WI-FI network generated by the Gateway (Gateway_F)
