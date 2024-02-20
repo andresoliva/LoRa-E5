@@ -15,6 +15,12 @@ This work was done in order to be used as both an educational tool for those who
 
 &nbsp;
 
+&nbsp;
+
+&nbsp;
+
+### Important remark:
+#### If you plan to use this libary with more than 5 devices sending information to the same gateway, use the function "TransmitePacket"  ( not the "TransmitePacketWithConfirmed" used in the examples) functions to avoid generating a bottle neck in the network.
 
 ## Features:
 
